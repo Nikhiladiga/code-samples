@@ -1,0 +1,29 @@
+# Typesense Code Samples
+
+A collection of sample projects demonstrating how to integrate [Typesense](https://typesense.org/) with various frameworks and technologies.
+
+## Structure
+
+This is a monorepo containing multiple standalone projects. Each project lives in its own directory with its own dependencies, configuration, and documentation.
+
+```
+code-samples/
+├── typesense-next-search-bar/    # Next.js + Typesense search implementation
+├── ...                           # More projects coming soon
+└── README.md                     # You are here
+```
+
+## Projects
+
+| Project                                                  | Framework | Description                                          |
+| -------------------------------------------------------- | --------- | ---------------------------------------------------- |
+| [typesense-next-search-bar](./typesense-next-search-bar) | Next.js   | A modern search bar with instant search capabilities |
+
+## Getting Started
+
+Each project is self-contained. Navigate to the project directory and follow its README for setup instructions:
+
+```bash
+cd <project-name>
+cat README.md
+```
