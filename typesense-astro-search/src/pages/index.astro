@@ -1,0 +1,33 @@
+---
+import BookSearch from "../components/BookSearch.astro";
+import Heading from "../components/Heading.astro";
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Book Search | Typesense + Astro</title>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/instantsearch.css@8/themes/satellite-min.css" />
+	</head>
+	<body>
+		<Heading/>
+		<BookSearch />
+	</body>
+</html>
+
+<style is:global>
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		margin: 0;
+		padding: 0;
+		background: #f5f7fa;
+		min-height: 100vh;
+	}
+</style>

@@ -6,8 +6,9 @@ A collection of sample projects demonstrating how to integrate [Typesense](https
 
 This is a monorepo containing multiple standalone projects. Each project lives in its own directory with its own dependencies, configuration, and documentation.
 
-```
+```plaintext
 code-samples/
+├── typesense-astro-search/       # Astro + Typesense search implementation
 ├── typesense-next-search-bar/    # Next.js + Typesense search implementation
 ├── ...                           # More projects coming soon
 └── README.md                     # You are here
@@ -17,6 +18,7 @@ code-samples/
 
 | Project                                                  | Framework | Description                                          |
 | -------------------------------------------------------- | --------- | ---------------------------------------------------- |
+| [typesense-astro-search](./typesense-astro-search)       | Astro     | A modern search bar with instant search capabilities |
 | [typesense-next-search-bar](./typesense-next-search-bar) | Next.js   | A modern search bar with instant search capabilities |
 
 ## Getting Started
