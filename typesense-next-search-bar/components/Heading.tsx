@@ -5,7 +5,7 @@ export default function Heading() {
   return (
     <>
       <div className={s.Heading}>
-        <h1>Next Search Bar</h1>
+        <h1>Next.js Search Bar</h1>
         <div>
           powered by{" "}
           <a
