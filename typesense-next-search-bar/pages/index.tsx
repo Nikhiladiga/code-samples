@@ -9,7 +9,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <Head>
-        <title>Next Search Bar</title>
+        <title>Next.js Search Bar</title>
+        <link rel="icon" type="image/png" href="/favicon.png" />
         <meta
           name="description"
           content="Search through our collection of books"
