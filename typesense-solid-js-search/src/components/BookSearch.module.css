@@ -1,0 +1,128 @@
+.searchContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.searchBoxContainer {
+  max-width: 600px;
+  margin: 0 auto 2rem;
+}
+
+/* Override InstantSearch searchbox styles */
+.ais-SearchBox {
+  width: 100%;
+}
+
+.searchForm {
+  position: relative;
+  width: 100%;
+  background: transparent;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.85rem 3rem 0.85rem 3rem;
+  font-size: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 30px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  background: white;
+}
+
+.searchInput:focus {
+  border-color: #667eea;
+  box-shadow: 0 2px 12px rgba(102, 126, 234, 0.2);
+}
+
+/* Add magnifying glass icon using pseudo-element */
+.searchForm::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='currentColor' viewBox='0 0 24 24' width='16' height='16'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  color: #7f8c8d;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Hide InstantSearch default reset button more aggressively */
+.ais-SearchBox-reset {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+/* Also hide any reset button inside the form */
+.ais-SearchBox-form .ais-SearchBox-reset {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+.searchSubmit,
+.searchReset {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: #7f8c8d;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchSubmit {
+  display: none;
+}
+
+.searchReset {
+  right: 0.75rem;
+}
+
+.searchSubmit:hover,
+.searchReset:hover {
+  color: #667eea;
+}
+
+.searchSubmitIcon,
+.searchResetIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.resultsCount {
+  color: #666;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .searchContainer {
+    padding: 1.5rem 1rem;
+  }
+}

@@ -1,0 +1,93 @@
+:root {
+  --primary-glow: linear-gradient(
+    135deg,
+    rgba(213, 43, 127, 0.4),
+    rgba(102, 126, 234, 0.4)
+  );
+  --accent: #d52b7f;
+  --step-3: clamp(1.5rem, 4vw, 2.5rem);
+  --step-0: clamp(0.875rem, 2vw, 1rem);
+}
+
+.Heading {
+  width: 100%;
+  text-align: center;
+  position: relative;
+  margin-top: 6rem;
+  margin-bottom: 2rem;
+}
+
+.Heading::after {
+  content: "";
+  background: var(--primary-glow);
+  width: 320px;
+  height: 180px;
+  z-index: -1;
+  left: 50%;
+  transform: translateX(-50%);
+  position: absolute;
+  filter: blur(45px);
+  top: -50%;
+  animation: move 40s ease-out infinite;
+}
+
+.Heading h1 {
+  font-size: var(--step-3);
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem 0;
+}
+
+.typesense {
+  color: var(--accent);
+  font-size: var(--step-0);
+  text-decoration: none;
+  font-family: monospace;
+}
+
+.typesense:hover {
+  text-decoration: underline;
+}
+
+.githubLink {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  color: #333;
+  transition: color 0.2s ease;
+}
+
+.githubLink:hover {
+  color: #000;
+}
+
+.githubLink svg {
+  width: 28px;
+  height: 28px;
+}
+
+.solidJSLogo {
+  width: calc(3.75vmax + 3.25rem);
+  position: relative;
+  top: calc(0.1vmax + 0.1rem);
+  vertical-align: middle;
+  margin-left: 0.25rem;
+}
+
+@keyframes move {
+  0% {
+    transform: translate(0%) scale(1);
+  }
+  45% {
+    transform: translate(-40%, 20%) scale(1.2);
+  }
+  75% {
+    transform: translate(5%, 40%) scale(1.3);
+  }
+  90% {
+    transform: translate(-5%, 5%) scale(0.9);
+  }
+  100% {
+    transform: translate(0%) scale(1);
+  }
+}
