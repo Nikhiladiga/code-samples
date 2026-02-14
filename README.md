@@ -8,22 +8,24 @@ This is a monorepo containing multiple standalone projects. Each project lives i
 
 ```plaintext
 code-samples/
-├── typesense-astro-search/       # Astro + Typesense search implementation
-├── typesense-next-search-bar/    # Next.js + Typesense search implementation
-├── typesense-solid-js-search/    # SolidJS + Typesense search implementation
-├── typesense-vanilla-js-search/  # Vanilla JS + Typesense search implementation
-├── ...                           # More projects coming soon
-└── README.md                     # You are here
+├── typesense-astro-search/              # Astro + Typesense search implementation
+├── typesense-next-search-bar/           # Next.js + Typesense search implementation
+├── typesense-react-native-search-bar/   # React Native + Typesense search implementation
+├── typesense-solid-js-search/           # SolidJS + Typesense search implementation
+├── typesense-vanilla-js-search/         # Vanilla JS + Typesense search implementation
+├── ...                                  # More projects coming soon
+└── README.md                            # You are here
 ```
 
 ## Projects
 
-| Project                                                        | Framework  | Description                                          |
-| -------------------------------------------------------------- | ---------- | ---------------------------------------------------- |
-| [typesense-astro-search](./typesense-astro-search)             | Astro      | A modern search bar with instant search capabilities |
-| [typesense-next-search-bar](./typesense-next-search-bar)       | Next.js    | A modern search bar with instant search capabilities |
-| [typesense-solid-js-search](./typesense-solid-js-search)       | SolidJS    | A modern search bar with instant search capabilities |
-| [typesense-vanilla-js-search](./typesense-vanilla-js-search)   | Vanilla JS | A modern search bar with instant search capabilities |
+| Project                                                                      | Framework     | Description                                                     |
+| ---------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------- |
+| [typesense-astro-search](./typesense-astro-search)                           | Astro         | A modern search bar with instant search capabilities            |
+| [typesense-next-search-bar](./typesense-next-search-bar)                     | Next.js       | A modern search bar with instant search capabilities            |
+| [typesense-react-native-search-bar](./typesense-react-native-search-bar)     | React Native  | A mobile search bar with instant search capabilities            |
+| [typesense-solid-js-search](./typesense-solid-js-search)                     | SolidJS       | A modern search bar with instant search capabilities            |
+| [typesense-vanilla-js-search](./typesense-vanilla-js-search)                 | Vanilla JS    | A modern search bar with instant search capabilities            |
 
 ## Getting Started
 
