@@ -1,24 +1,17 @@
 import React from "react";
 import { StyleSheet, TextInput } from "react-native";
+import { useSearchBox } from "react-instantsearch-core";
 
-interface SearchInputProps {
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder?: string;
-}
+export const SearchInput = () => {
+  const { query, refine } = useSearchBox();
 
-export const SearchInput = ({
-  value,
-  onChangeText,
-  placeholder,
-}: SearchInputProps) => {
   return (
     <TextInput
       style={styles.searchInput}
-      placeholder={placeholder}
+      placeholder="Search books..."
       placeholderTextColor="#999"
-      value={value}
-      onChangeText={onChangeText}
+      value={query}
+      onChangeText={refine}
     />
   );
 };

@@ -1,12 +1,15 @@
 import React from "react";
-import { Document } from "../types/Book";
+import { useHits } from "react-instantsearch-core";
 import { BookCard } from "./BookCard";
+import { Book } from "../types/Book";
 
-export const BookList = ({ books }: { books: Document[] }) => {
+export const BookList = () => {
+  const { items } = useHits<Book>();
+
   return (
     <>
-      {books.map((book) => (
-        <BookCard key={book.document.id} book={book.document} />
+      {items.map((book) => (
+        <BookCard key={book.id} book={book} />
       ))}
     </>
   );
