@@ -6,6 +6,8 @@ A modern search bar application built with React Native (Expo) and Typesense, fe
 
 - React Native (Expo)
 - Typesense
+- react-instantsearch-core
+- typesense-instantsearch-adapter
 - TypeScript
 
 ## Prerequisites

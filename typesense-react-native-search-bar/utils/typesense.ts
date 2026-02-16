@@ -1,22 +1,19 @@
-import { Document } from "../types/Book";
+import TypesenseInstantSearchAdapter from "typesense-instantsearch-adapter";
 
-export const search = async (searchQuery: string): Promise<Document[]> => {
-  const url = `${process.env.EXPO_PUBLIC_TYPESENSE_PROTOCOL}://${process.env.EXPO_PUBLIC_TYPESENSE_HOST}:${process.env.EXPO_PUBLIC_TYPESENSE_PORT}/collections/books/documents/search?q=${encodeURIComponent(
-    searchQuery,
-  )}&query_by=title,authors`;
+const typesenseInstantsearchAdapter = new TypesenseInstantSearchAdapter({
+  server: {
+    apiKey: process.env.EXPO_PUBLIC_TYPESENSE_API_KEY || "xyz",
+    nodes: [
+      {
+        host: process.env.EXPO_PUBLIC_TYPESENSE_HOST || "localhost",
+        port: Number(process.env.EXPO_PUBLIC_TYPESENSE_PORT) || 8108,
+        protocol: process.env.EXPO_PUBLIC_TYPESENSE_PROTOCOL || "http",
+      },
+    ],
+  },
+  additionalSearchParameters: {
+    query_by: "title,authors",
+  },
+});
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      "X-TYPESENSE-API-KEY": process.env.EXPO_PUBLIC_TYPESENSE_API_KEY || "xyz",
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error("Typesense search failed");
-  }
-
-  const data = await response.json();
-  return data?.hits || [];
-};
+export const searchClient = typesenseInstantsearchAdapter.searchClient;
