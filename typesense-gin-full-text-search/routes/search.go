@@ -27,8 +27,10 @@ func searchBooks(c *gin.Context) {
 
 	// Create search parameters
 	searchParams := &api.SearchCollectionParams{
-		Q:       pointer.String(query),
-		QueryBy: pointer.String("title,authors"),
+		Q:              pointer.String(query),
+		QueryBy:        pointer.String("title,authors"),
+		QueryByWeights: pointer.String("2,1"),                                     // Title matches are weighted 2x more than author matches
+		FacetBy:        pointer.String("authors,publication_year,average_rating"), // Get facet counts for filtering
 	}
 
 	// Perform search using the Typesense client
@@ -47,9 +49,10 @@ func searchBooks(c *gin.Context) {
 
 	// Return search results
 	c.JSON(http.StatusOK, gin.H{
-		"query":   query,
-		"results": *result.Hits,
-		"found":   *result.Found,
-		"took":    result.SearchTimeMs,
+		"query":        query,
+		"results":      *result.Hits,
+		"found":        *result.Found,
+		"took":         result.SearchTimeMs,
+		"facet_counts": result.FacetCounts,
 	})
 }

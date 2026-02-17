@@ -1,6 +1,10 @@
 package main
 
 import (
+	"context"
+	"log"
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/typesense/code-samples/typesense-gin-full-text-search/routes"
@@ -8,6 +12,22 @@ import (
 )
 
 func main() {
+	// Initialize collections before starting the server
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := utils.InitializeCollections(ctx); err != nil {
+		log.Fatalf("Failed to initialize collections: %v", err)
+	}
+
+	// Initialize data if collection is empty
+	// This is idempotent - only imports if collection has no documents
+	dataFile := "books.jsonl"
+	if err := utils.InitializeDataIfEmpty(ctx, utils.BookCollection, dataFile); err != nil {
+		log.Printf("Warning: Failed to initialize data: %v", err)
+		log.Println("Server will continue, but collection may be empty")
+	}
+
 	router := gin.Default()
 
 	// CORS middleware
