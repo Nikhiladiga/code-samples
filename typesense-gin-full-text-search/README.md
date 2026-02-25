@@ -1,18 +1,19 @@
 # Gin Full-Text Search with Typesense
 
-A RESTful search API built with Go Gin framework and Typesense, featuring full-text search capabilities with environment-based configuration.
+A production-ready RESTful search API built with Go Gin framework, PostgreSQL, and Typesense. Features full-text search, CRUD operations, real-time async indexing, and background sync workers.
 
 ## Tech Stack
 
 - Go 1.19+
 - Gin Web Framework
+- PostgreSQL with GORM
 - Typesense
-
+- Docker
 ## Prerequisites
 
 - Go 1.19+ installed
-- Docker (for running Typesense locally). Alternatively, you can use a Typesense Cloud cluster.
-- Basic knowledge of Go and REST APIs.
+- Docker and Docker Compose (for Typesense and PostgreSQL)
+- Basic knowledge of Go, REST APIs, and SQL
 
 ## Quick Start
 
@@ -29,31 +30,68 @@ cd typesense-gin-full-text-search
 go mod download
 ```
 
-### 3. Set up environment variables
+### 3. Start Typesense and PostgreSQL
 
-Create a `.env` file in the project root with the following content:
+Run Typesense and PostgreSQL using Docker:
+
+```bash
+# Start Typesense
+docker run -d \
+  -p 8108:8108 \
+  -v typesense-data:/data \
+  typesense/typesense:30.1 \
+  --data-dir /data \
+  --api-key=1234 \
+  --enable-cors
+
+# Start PostgreSQL
+docker run -d \
+  -p 5432:5432 \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=typesense_books \
+  -v postgres-data:/var/lib/postgresql/data \
+  postgres:15
+```
+
+### 4. Set up environment variables
+
+Create a `.env` file in the project root:
 
 ```env
 # Server Configuration
 PORT=3000
+
+# Database Configuration
+DB_HOST=localhost
+DB_USER=postgres
+DB_PASSWORD=password
+DB_NAME=typesense_books
+DB_PORT=5432
 
 # Typesense Configuration
 TYPESENSE_HOST=localhost
 TYPESENSE_PORT=8108
 TYPESENSE_PROTOCOL=http
 TYPESENSE_API_KEY=xyz
-TYPESENSE_COLLECTION=books
 ```
 
 ### 4. Project Structure
 
 ```text
-├── routes
-│   └── search.go
-├── utils
-│   ├── env.go
-│   └── typesense.go
-├── server.go
+├── models/
+│   └── book.go              # Book model with GORM tags
+├── routes/
+│   ├── books.go             # CRUD endpoints for books
+│   └── search.go            # Search and sync endpoints
+├── utils/
+│   ├── collections.go       # Typesense collection schema
+│   ├── database.go          # PostgreSQL database operations
+│   ├── env.go               # Environment variable helpers
+│   ├── sync.go              # Sync logic (incremental, full, soft delete)
+│   ├── sync_worker.go       # Background sync worker
+│   └── typesense.go         # Typesense client initialization
+├── server.go                # Main application entry point
 ├── go.mod
 └── .env
 ```
@@ -84,9 +122,9 @@ The server will automatically restart when you make changes to any Go file.
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 6. Search API Endpoint
+### 7. API Endpoints
 
-**Search:**
+#### Search
 
 ```bash
 GET /search?q=<query>
@@ -98,23 +136,235 @@ Example:
 curl "http://localhost:3000/search?q=harry"
 ```
 
-### 7. Deployment
+Response:
 
-Set env variables to point the app to the Typesense Cluster:
+```json
+{
+  "query": "harry",
+  "found": 7,
+  "results": [...],
+  "facet_counts": [...]
+}
+```
+
+#### CRUD Operations
+
+**Create a book:**
+
+```bash
+POST /books
+Content-Type: application/json
+
+{
+  "title": "The Go Programming Language",
+  "authors": ["Alan Donovan", "Brian Kernighan"],
+  "publication_year": 2015,
+  "average_rating": 4.5,
+  "image_url": "https://example.com/image.jpg",
+  "ratings_count": 1000
+}
+```
+
+**Get a book:**
+
+```bash
+GET /books/:id
+```
+
+**Get all books:**
+
+```bash
+GET /books
+```
+
+**Update a book:**
+
+```bash
+PUT /books/:id
+Content-Type: application/json
+
+{
+  "title": "Updated Title",
+  "authors": ["Author Name"],
+  "publication_year": 2024,
+  "average_rating": 4.8,
+  "image_url": "https://example.com/updated.jpg",
+  "ratings_count": 1500
+}
+```
+
+**Delete a book (soft delete):**
+
+```bash
+DELETE /books/:id
+```
+
+#### Sync Operations
+
+**Trigger manual sync:**
+
+```bash
+POST /sync
+```
+
+Response:
+
+```json
+{
+  "message": "Sync completed",
+  "newSyncTime": "2026-02-25T07:54:11+05:30",
+  "syncedAt": "2026-02-25T07:54:11+05:30",
+  "deletedBooks": 1
+}
+```
+
+**Check sync status:**
+
+```bash
+GET /sync/status
+```
+
+Response:
+
+```json
+{
+  "lastSyncTime": "2026-02-25T07:54:11+05:30",
+  "syncWorkerRunning": true
+}
+```
+
+### 8. How It Works
+
+#### Architecture
+
+```
+User Request
+    ↓
+Gin API (CRUD)
+    ↓
+PostgreSQL (Source of Truth)
+    ↓
+Async Sync → Typesense (Search Index)
+    ↑
+Background Worker (Every 60s)
+```
+
+#### Sync Strategies
+
+**1. Real-time Sync (Async)**
+- Triggered on: Create, Update, Delete operations
+- Non-blocking: API responds immediately
+- Runs in background goroutine
+- If fails: Background worker catches it within 60 seconds
+
+**2. Background Periodic Sync**
+- Runs every 60 seconds automatically
+- Incremental: Only syncs books with `updated_at > lastSyncTime`
+- Handles soft deletes: Removes deleted books from Typesense
+- Efficient: Uses upsert to handle both inserts and updates
+
+**3. Manual Sync**
+- Endpoint: `POST /sync`
+- On-demand sync trigger
+- Useful for debugging or forced sync
+
+#### Database Schema
+
+```sql
+CREATE TABLE books (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255),
+    authors JSONB,                    -- Array stored as JSON
+    publication_year INTEGER,
+    average_rating DECIMAL,
+    image_url VARCHAR(255),
+    ratings_count INTEGER,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP              -- Soft delete support
+);
+```
+
+#### Typesense Collection Schema
+
+```go
+{
+    "name": "books",
+    "fields": [
+        {"name": "id", "type": "string"},
+        {"name": "title", "type": "string"},
+        {"name": "authors", "type": "string[]", "facet": true},
+        {"name": "publication_year", "type": "int32", "facet": true},
+        {"name": "average_rating", "type": "float", "facet": true},
+        {"name": "image_url", "type": "string"},
+        {"name": "ratings_count", "type": "int32"}
+    ]
+}
+```
+
+### 9. Deployment
+
+**Environment Variables for Production:**
 
 ```env
 # Server Configuration
 PORT=3000
+GIN_MODE=release
 
-# Typesense Configuration
+# Database Configuration (use managed PostgreSQL)
+DB_HOST=your-postgres-host.com
+DB_USER=your-db-user
+DB_PASSWORD=your-secure-password
+DB_NAME=typesense_books
+DB_PORT=5432
+
+# Typesense Configuration (use Typesense Cloud)
 TYPESENSE_HOST=xxx.typesense.net
 TYPESENSE_PORT=443
 TYPESENSE_PROTOCOL=https
 TYPESENSE_API_KEY=your-production-api-key
-TYPESENSE_COLLECTION=books
 ```
 
-- Configure CORS middleware for specific origins.
-- Configure gin to run in release mode.
-- Add some sort of authentication to the API.
-- Add rate limiting to the API.
+### 10. Testing the Sync
+
+**Test real-time sync:**
+
+```bash
+# 1. Create a book via API
+curl -X POST http://localhost:3000/books \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Test Book", "authors": ["Author"], "publication_year": 2024}'
+
+# 2. Search immediately (should appear)
+curl "http://localhost:3000/search?q=Test"
+```
+
+**Test background sync:**
+
+```bash
+# 1. Insert book directly in database (bypassing API)
+psql -h localhost -U postgres -d typesense_books -c "
+INSERT INTO books (title, authors, publication_year, created_at, updated_at)
+VALUES ('Direct DB Book', '[\"DB Author\"]', 2025, NOW(), NOW());
+"
+
+# 2. Wait 60 seconds for background worker
+
+# 3. Search (should appear after sync)
+curl "http://localhost:3000/search?q=Direct"
+```
+
+**Test soft delete sync:**
+
+```bash
+# 1. Soft delete a book in database
+psql -h localhost -U postgres -d typesense_books -c "
+UPDATE books SET deleted_at = NOW(), updated_at = NOW() WHERE id = 1;
+"
+
+# 2. Trigger manual sync or wait 60 seconds
+curl -X POST http://localhost:3000/sync
+
+# 3. Search (should not appear)
+curl "http://localhost:3000/search?q=<book-title>"
+```
