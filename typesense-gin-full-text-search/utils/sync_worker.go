@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	workerCtx     context.Context
-	workerCancel  context.CancelFunc
+	workerCtx    context.Context
+	workerCancel context.CancelFunc
 )
 
 // StartSyncWorker starts a background worker that periodically syncs database changes to Typesense
@@ -25,8 +25,10 @@ func StartSyncWorker(ctx context.Context, config *SyncConfig) {
 		// Wait a bit before first sync to allow server to start
 		time.Sleep(2 * time.Second)
 		lastSyncTime := GetLastSyncTime()
-		if _, err := SyncBooksToTypesense(workerCtx, lastSyncTime); err != nil {
+		if newSyncTime, err := SyncBooksToTypesense(workerCtx, lastSyncTime); err != nil {
 			log.Printf("Initial sync failed: %v", err)
+		} else {
+			SetLastSyncTime(newSyncTime)
 		}
 	}()
 
@@ -39,8 +41,11 @@ func StartSyncWorker(ctx context.Context, config *SyncConfig) {
 		case <-ticker.C:
 			log.Printf("Running periodic sync...")
 			lastSyncTime := GetLastSyncTime()
-			if _, err := SyncBooksToTypesense(workerCtx, lastSyncTime); err != nil {
+			if newSyncTime, err := SyncBooksToTypesense(workerCtx, lastSyncTime); err != nil {
 				log.Printf("Periodic sync failed: %v", err)
+			} else {
+				// Update the last sync time after successful sync
+				SetLastSyncTime(newSyncTime)
 			}
 			// Handle soft deletes if enabled
 			if config.EnableSoftDelete {

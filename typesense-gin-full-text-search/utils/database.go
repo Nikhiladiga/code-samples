@@ -50,6 +50,7 @@ func GetBookByID(ctx context.Context, id uint) (*models.Book, error) {
 
 // GetBooksByUpdatedAt fetches books updated after a given time
 // This is used for incremental sync to Typesense
+// WARNING: This loads all matching books into memory. For large result sets, use GetBooksByUpdatedAtPaginated.
 func GetBooksByUpdatedAt(ctx context.Context, since time.Time) ([]models.Book, error) {
 	var books []models.Book
 	err := DB.WithContext(ctx).
@@ -59,11 +60,56 @@ func GetBooksByUpdatedAt(ctx context.Context, since time.Time) ([]models.Book, e
 	return books, err
 }
 
+// GetBooksByUpdatedAtPaginated fetches books updated after a given time in pages
+// Returns books for the given page (1-indexed) with the specified page size
+func GetBooksByUpdatedAtPaginated(ctx context.Context, since time.Time, page int, pageSize int) ([]models.Book, error) {
+	var books []models.Book
+	offset := (page - 1) * pageSize
+	err := DB.WithContext(ctx).
+		Where("updated_at > ?", since).
+		Offset(offset).
+		Limit(pageSize).
+		Order("updated_at ASC").
+		Find(&books).Error
+	return books, err
+}
+
+// GetUpdatedBooksCount returns the count of books updated after a given time
+func GetUpdatedBooksCount(ctx context.Context, since time.Time) (int64, error) {
+	var count int64
+	err := DB.WithContext(ctx).
+		Model(&models.Book{}).
+		Where("updated_at > ?", since).
+		Count(&count).Error
+	return count, err
+}
+
 // GetAllBooks fetches all books (for full import)
+// WARNING: This loads all books into memory at once. For large datasets, use GetAllBooksPaginated instead.
 func GetAllBooks(ctx context.Context) ([]models.Book, error) {
 	var books []models.Book
 	err := DB.WithContext(ctx).Find(&books).Error
 	return books, err
+}
+
+// GetAllBooksPaginated fetches books in pages for memory-efficient processing
+// Returns books for the given page (1-indexed) with the specified page size
+func GetAllBooksPaginated(ctx context.Context, page int, pageSize int) ([]models.Book, error) {
+	var books []models.Book
+	offset := (page - 1) * pageSize
+	err := DB.WithContext(ctx).
+		Offset(offset).
+		Limit(pageSize).
+		Order("id ASC"). // Consistent ordering for pagination
+		Find(&books).Error
+	return books, err
+}
+
+// GetTotalBooksCount returns the total number of books in the database
+func GetTotalBooksCount(ctx context.Context) (int64, error) {
+	var count int64
+	err := DB.WithContext(ctx).Model(&models.Book{}).Count(&count).Error
+	return count, err
 }
 
 // GetDeletedBooks fetches soft-deleted books since a given time

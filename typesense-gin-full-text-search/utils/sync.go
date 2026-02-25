@@ -17,7 +17,8 @@ import (
 
 // SyncConfig holds configuration for the sync process
 type SyncConfig struct {
-	BatchSize        int
+	BatchSize        int // Typesense import batch size (documents per API call)
+	PageSize         int // Database pagination size (records fetched per query)
 	SyncIntervalSec  int
 	EnableSoftDelete bool
 }
@@ -25,148 +26,217 @@ type SyncConfig struct {
 // DefaultSyncConfig returns default sync configuration
 func DefaultSyncConfig() *SyncConfig {
 	return &SyncConfig{
-		BatchSize:       100,
-		SyncIntervalSec: 60, // Sync every 60 seconds
+		BatchSize:       1000, // Import 1K documents per Typesense API call
+		PageSize:        1000, // Fetch 1K records per DB query
+		SyncIntervalSec: 60,   // Sync every 60 seconds
 	}
 }
 
 // SyncAllBooksToTypesense performs a full sync of all books from database to Typesense
 // This should only be used for initial data load when Typesense is empty
 // For regular syncing, use SyncBooksToTypesense which is incremental
+// Uses pagination to handle large datasets efficiently (processes 1K records at a time)
 func SyncAllBooksToTypesense(ctx context.Context) error {
 	log.Printf("Starting full sync of all books to Typesense...")
 
-	// Get all books from DB
-	books, err := GetAllBooks(ctx)
+	config := DefaultSyncConfig()
+
+	// Get total count first
+	totalCount, err := GetTotalBooksCount(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to fetch books from DB: %w", err)
+		return fmt.Errorf("failed to get total books count: %w", err)
 	}
 
-	if len(books) == 0 {
+	if totalCount == 0 {
 		log.Println("No books found in database")
 		return nil
 	}
 
-	log.Printf("Syncing %d books to Typesense", len(books))
+	log.Printf("Total books to sync: %d (processing in batches of %d)", totalCount, config.PageSize)
 
-	// Convert books to Typesense document format
-	documents := make([]any, 0, len(books))
-	for _, book := range books {
-		doc := map[string]any{
-			"id":               book.GetTypesenseID(),
-			"title":            book.Title,
-			"authors":          book.Authors,
-			"publication_year": book.PublicationYear,
-			"average_rating":   book.AverageRating,
-			"image_url":        book.ImageUrl,
-			"ratings_count":    book.RatingsCount,
+	// Calculate total pages
+	totalPages := int((totalCount + int64(config.PageSize) - 1) / int64(config.PageSize))
+	log.Printf("Will process %d pages", totalPages)
+
+	totalSuccess := 0
+	totalFailure := 0
+
+	// Process each page
+	for page := 1; page <= totalPages; page++ {
+		log.Printf("Processing page %d/%d...", page, totalPages)
+
+		// Fetch books for this page
+		books, err := GetAllBooksPaginated(ctx, page, config.PageSize)
+		if err != nil {
+			return fmt.Errorf("failed to fetch books page %d: %w", page, err)
 		}
-		documents = append(documents, doc)
-	}
 
-	// Import documents in bulk using Typesense's import API
-	// Use upsert action to handle both inserts and updates
-	upsertAction := api.IndexAction("upsert")
-	importParams := &api.ImportDocumentsParams{
-		BatchSize: pointer.Int(DefaultSyncConfig().BatchSize),
-		Action:    &upsertAction,
-	}
+		if len(books) == 0 {
+			log.Printf("Page %d returned no books, stopping", page)
+			break
+		}
 
-	results, err := Client.Collection(BookCollection).Documents().Import(
-		ctx,
-		documents,
-		importParams,
-	)
+		log.Printf("Fetched %d books from page %d", len(books), page)
 
-	if err != nil {
-		return fmt.Errorf("bulk import to Typesense failed: %w", err)
-	}
+		// Convert books to Typesense document format
+		documents := make([]any, 0, len(books))
+		for _, book := range books {
+			doc := map[string]any{
+				"id":               book.GetTypesenseID(),
+				"title":            book.Title,
+				"authors":          book.Authors,
+				"publication_year": book.PublicationYear,
+				"average_rating":   book.AverageRating,
+				"image_url":        book.ImageUrl,
+				"ratings_count":    book.RatingsCount,
+			}
+			documents = append(documents, doc)
+		}
 
-	// Count successes and failures
-	successCount := 0
-	failureCount := 0
-	for _, result := range results {
-		if result.Success {
-			successCount++
-		} else {
-			failureCount++
-			if failureCount <= 5 {
-				log.Printf("Sync error for document %s: %s", result.Id, result.Error)
+		// Import this batch to Typesense
+		upsertAction := api.IndexAction("upsert")
+		importParams := &api.ImportDocumentsParams{
+			BatchSize: pointer.Int(config.BatchSize),
+			Action:    &upsertAction,
+		}
+
+		results, err := Client.Collection(BookCollection).Documents().Import(
+			ctx,
+			documents,
+			importParams,
+		)
+
+		if err != nil {
+			return fmt.Errorf("bulk import to Typesense failed on page %d: %w", page, err)
+		}
+
+		// Count successes and failures for this batch
+		pageSuccess := 0
+		pageFailure := 0
+		for _, result := range results {
+			if result.Success {
+				pageSuccess++
+			} else {
+				pageFailure++
+				if totalFailure+pageFailure <= 5 {
+					log.Printf("Sync error for document %s: %s", result.Id, result.Error)
+				}
 			}
 		}
+
+		totalSuccess += pageSuccess
+		totalFailure += pageFailure
+
+		log.Printf("Page %d/%d completed: %d succeeded, %d failed (Total so far: %d succeeded, %d failed)",
+			page, totalPages, pageSuccess, pageFailure, totalSuccess, totalFailure)
 	}
 
-	log.Printf("Full sync completed: %d documents upserted, %d failed", successCount, failureCount)
+	log.Printf("Full sync completed: %d documents upserted, %d failed out of %d total",
+		totalSuccess, totalFailure, totalCount)
 	return nil
 }
 
 // SyncBooksToTypesense fetches books changed since lastSyncTime and upserts them into Typesense
 // This is an incremental sync - only syncs books modified since the last sync
+// Uses pagination to handle large datasets efficiently (processes 1K records at a time)
 // Returns the new lastSyncTime
 func SyncBooksToTypesense(ctx context.Context, lastSyncTime time.Time) (time.Time, error) {
 	log.Printf("Starting incremental sync from database to Typesense since %s", lastSyncTime.Format(time.RFC3339))
 
-	// Get only books updated since last sync (efficient for large datasets)
-	books, err := GetBooksByUpdatedAt(ctx, lastSyncTime)
+	config := DefaultSyncConfig()
+
+	// Get count of books updated since last sync
+	updatedCount, err := GetUpdatedBooksCount(ctx, lastSyncTime)
 	if err != nil {
-		return lastSyncTime, fmt.Errorf("failed to fetch changed books from DB: %w", err)
+		return lastSyncTime, fmt.Errorf("failed to get updated books count: %w", err)
 	}
 
-	if len(books) == 0 {
+	if updatedCount == 0 {
 		log.Println("No changes to sync")
 		return time.Now(), nil
 	}
 
-	log.Printf("Found %d books to sync", len(books))
+	log.Printf("Found %d books to sync (processing in batches of %d)", updatedCount, config.PageSize)
 
-	// Convert books to Typesense document format
-	documents := make([]any, 0, len(books))
-	for _, book := range books {
-		doc := map[string]any{
-			"id":               book.GetTypesenseID(),
-			"title":            book.Title,
-			"authors":          book.Authors,
-			"publication_year": book.PublicationYear,
-			"average_rating":   book.AverageRating,
-			"image_url":        book.ImageUrl,
-			"ratings_count":    book.RatingsCount,
+	// Calculate total pages
+	totalPages := int((updatedCount + int64(config.PageSize) - 1) / int64(config.PageSize))
+	log.Printf("Will process %d pages", totalPages)
+
+	totalSuccess := 0
+	totalFailure := 0
+
+	// Process each page
+	for page := 1; page <= totalPages; page++ {
+		log.Printf("Processing page %d/%d...", page, totalPages)
+
+		// Fetch books for this page
+		books, err := GetBooksByUpdatedAtPaginated(ctx, lastSyncTime, page, config.PageSize)
+		if err != nil {
+			return lastSyncTime, fmt.Errorf("failed to fetch books page %d: %w", page, err)
 		}
-		documents = append(documents, doc)
-	}
 
-	// Import documents in bulk using Typesense's import API
-	// Use upsert action to handle both inserts and updates
-	upsertAction := api.IndexAction("upsert")
-	importParams := &api.ImportDocumentsParams{
-		BatchSize: pointer.Int(DefaultSyncConfig().BatchSize),
-		Action:    &upsertAction,
-	}
+		if len(books) == 0 {
+			log.Printf("Page %d returned no books, stopping", page)
+			break
+		}
 
-	results, err := Client.Collection(BookCollection).Documents().Import(
-		ctx,
-		documents,
-		importParams,
-	)
+		log.Printf("Fetched %d books from page %d", len(books), page)
 
-	if err != nil {
-		return lastSyncTime, fmt.Errorf("bulk import to Typesense failed: %w", err)
-	}
+		// Convert books to Typesense document format
+		documents := make([]any, 0, len(books))
+		for _, book := range books {
+			doc := map[string]any{
+				"id":               book.GetTypesenseID(),
+				"title":            book.Title,
+				"authors":          book.Authors,
+				"publication_year": book.PublicationYear,
+				"average_rating":   book.AverageRating,
+				"image_url":        book.ImageUrl,
+				"ratings_count":    book.RatingsCount,
+			}
+			documents = append(documents, doc)
+		}
 
-	// Count successes and failures
-	successCount := 0
-	failureCount := 0
-	for _, result := range results {
-		if result.Success {
-			successCount++
-		} else {
-			failureCount++
-			if failureCount <= 5 {
-				log.Printf("Sync error for document %s: %s", result.Id, result.Error)
+		// Import this batch to Typesense
+		upsertAction := api.IndexAction("upsert")
+		importParams := &api.ImportDocumentsParams{
+			BatchSize: pointer.Int(config.BatchSize),
+			Action:    &upsertAction,
+		}
+
+		results, err := Client.Collection(BookCollection).Documents().Import(
+			ctx,
+			documents,
+			importParams,
+		)
+
+		if err != nil {
+			return lastSyncTime, fmt.Errorf("bulk import to Typesense failed on page %d: %w", page, err)
+		}
+
+		// Count successes and failures for this batch
+		pageSuccess := 0
+		pageFailure := 0
+		for _, result := range results {
+			if result.Success {
+				pageSuccess++
+			} else {
+				pageFailure++
+				if totalFailure+pageFailure <= 5 {
+					log.Printf("Sync error for document %s: %s", result.Id, result.Error)
+				}
 			}
 		}
+
+		totalSuccess += pageSuccess
+		totalFailure += pageFailure
+
+		log.Printf("Page %d/%d completed: %d succeeded, %d failed (Total so far: %d succeeded, %d failed)",
+			page, totalPages, pageSuccess, pageFailure, totalSuccess, totalFailure)
 	}
 
-	log.Printf("Sync completed: %d documents upserted, %d failed", successCount, failureCount)
+	log.Printf("Incremental sync completed: %d documents upserted, %d failed out of %d total",
+		totalSuccess, totalFailure, updatedCount)
 
 	// Update last sync time
 	newSyncTime := time.Now()

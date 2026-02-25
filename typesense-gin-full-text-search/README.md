@@ -272,6 +272,45 @@ Background Worker (Every 60s)
 - On-demand sync trigger
 - Useful for debugging or forced sync
 
+#### Pagination for Large Datasets
+
+**The sync implementation uses pagination to handle large datasets efficiently:**
+
+- **Database Pagination**: Fetches 1,000 records per query (configurable via `PageSize`)
+- **Batch Import**: Imports 1,000 documents per Typesense API call (configurable via `BatchSize`)
+- **Memory Efficient**: Processes data in chunks to avoid loading entire dataset into memory
+- **Progress Tracking**: Logs progress for each page/batch processed
+
+**Configuration** (in `utils/sync.go`):
+
+```go
+type SyncConfig struct {
+    BatchSize: 1000,  // Typesense import batch size
+    PageSize:  1000,  // Database pagination size
+}
+```
+
+**Benefits**:
+
+- ✅ Handles millions of records without memory issues
+- ✅ Predictable memory usage regardless of dataset size
+- ✅ Detailed progress logging for monitoring
+- ✅ Automatic retry handling by Typesense Go client (3 retries with 1s interval)
+
+**Example Log Output** (for 5,500 records):
+
+```plaintext
+Total books to sync: 5500 (processing in batches of 1000)
+Will process 6 pages
+Processing page 1/6...
+Fetched 1000 books from page 1
+Page 1/6 completed: 1000 succeeded, 0 failed (Total so far: 1000 succeeded, 0 failed)
+Processing page 2/6...
+...
+Page 6/6 completed: 500 succeeded, 0 failed (Total so far: 5500 succeeded, 0 failed)
+Full sync completed: 5500 documents upserted, 0 failed out of 5500 total
+```
+
 #### Database Schema
 
 ```sql
