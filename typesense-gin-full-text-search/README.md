@@ -9,10 +9,11 @@ A production-ready RESTful search API built with Go Gin framework, PostgreSQL, a
 - PostgreSQL with GORM
 - Typesense
 - Docker
+
 ## Prerequisites
 
 - Go 1.19+ installed
-- Docker and Docker Compose (for Typesense and PostgreSQL)
+- Docker (for Typesense and PostgreSQL)
 - Basic knowledge of Go, REST APIs, and SQL
 
 ## Quick Start
@@ -237,7 +238,7 @@ Response:
 
 #### Architecture
 
-```
+```plaintext
 User Request
     ↓
 Gin API (CRUD)
@@ -251,19 +252,22 @@ Background Worker (Every 60s)
 
 #### Sync Strategies
 
-**1. Real-time Sync (Async)**
+##### 1. Real-time Sync (Async)
+
 - Triggered on: Create, Update, Delete operations
 - Non-blocking: API responds immediately
 - Runs in background goroutine
 - If fails: Background worker catches it within 60 seconds
 
-**2. Background Periodic Sync**
+##### 2. Background Periodic Sync
+
 - Runs every 60 seconds automatically
 - Incremental: Only syncs books with `updated_at > lastSyncTime`
 - Handles soft deletes: Removes deleted books from Typesense
 - Efficient: Uses upsert to handle both inserts and updates
 
-**3. Manual Sync**
+##### 3. Manual Sync
+
 - Endpoint: `POST /sync`
 - On-demand sync trigger
 - Useful for debugging or forced sync
