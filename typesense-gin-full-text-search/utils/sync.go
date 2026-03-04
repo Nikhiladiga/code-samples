@@ -259,7 +259,7 @@ func SyncSoftDeletesToTypesense(ctx context.Context, deletedBookIDs []uint) erro
 	}
 
 	// Build filter: id:=[book_1,book_2,book_3]
-	filterBy := fmt.Sprintf("id:=[%s]", joinStringSlice(idStrings, ","))
+	filterBy := fmt.Sprintf("id:=[%s]", strings.Join(idStrings, ","))
 
 	log.Printf("Deleting %d documents from Typesense: %s", len(deletedBookIDs), filterBy)
 
@@ -274,23 +274,6 @@ func SyncSoftDeletesToTypesense(ctx context.Context, deletedBookIDs []uint) erro
 
 	log.Printf("Successfully deleted %d documents from Typesense", len(deletedBookIDs))
 	return nil
-}
-
-// joinStringSlice joins string slice with separator using strings.Builder
-func joinStringSlice(slice []string, sep string) string {
-	if len(slice) == 0 {
-		return ""
-	}
-	if len(slice) == 1 {
-		return slice[0]
-	}
-	var builder strings.Builder
-	builder.WriteString(slice[0])
-	for i := 1; i < len(slice); i++ {
-		builder.WriteString(sep)
-		builder.WriteString(slice[i])
-	}
-	return builder.String()
 }
 
 // BookToDocument converts a Book model to a Typesense document map
@@ -363,7 +346,7 @@ type SyncState struct {
 
 var (
 	globalSyncState = &SyncState{
-		LastSyncTime: time.Now(),
+		LastSyncTime: time.Time{}, // Zero value ensures initial sync finds all existing records
 	}
 )
 

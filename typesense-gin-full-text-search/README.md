@@ -42,7 +42,7 @@ docker run -d \
   -v typesense-data:/data \
   typesense/typesense:30.1 \
   --data-dir /data \
-  --api-key=1234 \
+  --api-key=xyz \
   --enable-cors
 
 # Start PostgreSQL

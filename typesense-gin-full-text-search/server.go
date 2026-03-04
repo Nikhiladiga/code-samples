@@ -12,6 +12,11 @@ import (
 )
 
 func main() {
+	// Initialize environment variables first (loads .env file)
+	utils.InitializeEnv()
+
+	// Initialize Typesense client (depends on env vars being loaded)
+	utils.InitializeTypesenseClient()
 
 	// Connect to database (stores global DB instance in utils.DB)
 	utils.ConnectToDB(context.Background())
@@ -41,7 +46,7 @@ func main() {
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 	}))
 
 	// Health check endpoint

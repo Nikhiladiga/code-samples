@@ -9,7 +9,9 @@ import (
 
 var Client *typesense.Client
 
-func init() {
+// InitializeTypesenseClient creates the Typesense client
+// This must be called after InitializeEnv() to ensure environment variables are loaded
+func InitializeTypesenseClient() {
 	apiKey := GetEnv("TYPESENSE_API_KEY", "xyz")
 	serverURL := GetServerURL()
 

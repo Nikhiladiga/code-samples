@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/typesense/code-samples/typesense-gin-full-text-search/models"
@@ -180,7 +181,7 @@ func BulkUpsertBooks(ctx context.Context, books []models.Book) error {
 			image_url = EXCLUDED.image_url,
 			ratings_count = EXCLUDED.ratings_count,
 			updated_at = NOW()
-	`, tableName, joinStringSlice(values, ","))
+	`, tableName, strings.Join(values, ","))
 
 	return DB.WithContext(ctx).Exec(query, args...).Error
 }

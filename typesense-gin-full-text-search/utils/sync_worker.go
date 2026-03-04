@@ -3,14 +3,16 @@ package utils
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/typesense/code-samples/typesense-gin-full-text-search/models"
 )
 
 var (
-	workerCtx    context.Context
-	workerCancel context.CancelFunc
+	workerCtx       context.Context
+	workerCancel    context.CancelFunc
+	workerStartedOnce sync.Once
 )
 
 // StartSyncWorker starts a background worker that periodically syncs database changes to Typesense
@@ -20,8 +22,8 @@ func StartSyncWorker(ctx context.Context, config *SyncConfig) {
 
 	log.Printf("Starting sync worker with interval: %d seconds", config.SyncIntervalSec)
 
-	// Initial sync
-	go func() {
+	// Initial sync - wait for it to complete before starting the ticker
+	workerStartedOnce.Do(func() {
 		// Wait a bit before first sync to allow server to start
 		time.Sleep(2 * time.Second)
 		lastSyncTime := GetLastSyncTime()
@@ -29,10 +31,11 @@ func StartSyncWorker(ctx context.Context, config *SyncConfig) {
 			log.Printf("Initial sync failed: %v", err)
 		} else {
 			SetLastSyncTime(newSyncTime)
+			log.Printf("Initial sync completed at %s", newSyncTime.Format(time.RFC3339))
 		}
-	}()
+	})
 
-	// Periodic sync loop
+	// Periodic sync loop - only starts after initial sync completes
 	ticker := time.NewTicker(time.Duration(config.SyncIntervalSec) * time.Second)
 	defer ticker.Stop()
 
@@ -49,7 +52,7 @@ func StartSyncWorker(ctx context.Context, config *SyncConfig) {
 			}
 			// Handle soft deletes if enabled
 			if config.EnableSoftDelete {
-				if err := handleSoftDeletes(workerCtx); err != nil {
+				if err := handleSoftDeletes(workerCtx, lastSyncTime); err != nil {
 					log.Printf("Soft delete sync failed: %v", err)
 				}
 			}
@@ -69,9 +72,9 @@ func StopSyncWorker() {
 }
 
 // handleSoftDeletes processes soft-deleted books and removes them from Typesense
-func handleSoftDeletes(ctx context.Context) error {
-	lastSyncTime := GetLastSyncTime()
-
+// Uses the provided lastSyncTime instead of reading the current time to avoid
+// missing soft-deletes that occurred between the upsert sync and soft delete check
+func handleSoftDeletes(ctx context.Context, lastSyncTime time.Time) error {
 	log.Printf("handleSoftDeletes: checking for soft-deleted books since %s", lastSyncTime.Format(time.RFC3339))
 
 	// Get soft-deleted books since last sync

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -81,9 +82,33 @@ func getBook(c *gin.Context) {
 	})
 }
 
-// getAllBooks retrieves all books from the database
+// getAllBooks retrieves all books from the database with pagination
 func getAllBooks(c *gin.Context) {
-	books, err := utils.GetAllBooks(c.Request.Context())
+	// Parse pagination parameters
+	page := 1
+	pageSize := 100 // Default page size
+	if p := c.DefaultQuery("page", "1"); p != "" {
+		if _, err := fmt.Sscanf(p, "%d", &page); err != nil {
+			page = 1
+		}
+	}
+	if ps := c.DefaultQuery("page_size", "100"); ps != "" {
+		if _, err := fmt.Sscanf(ps, "%d", &pageSize); err != nil {
+			pageSize = 100
+		}
+	}
+
+	// Get total count for pagination metadata
+	totalCount, err := utils.GetTotalBooksCount(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch books count: " + err.Error(),
+		})
+		return
+	}
+
+	// Fetch paginated books
+	books, err := utils.GetAllBooksPaginated(c.Request.Context(), page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch books: " + err.Error(),
@@ -92,8 +117,11 @@ func getAllBooks(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"count": len(books),
-		"books": books,
+		"count":     len(books),
+		"total":     totalCount,
+		"page":      page,
+		"page_size": pageSize,
+		"books":     books,
 	})
 }
 
