@@ -36,11 +36,11 @@ go mod download
 Run Typesense and PostgreSQL using Docker:
 
 ```bash
-# Start Typesense
+# Start Typesense (replace TYPESENSE_VERSION with the latest from https://typesense.org/docs/guide/install-typesense.html)
 docker run -d \
   -p 8108:8108 \
   -v typesense-data:/data \
-  typesense/typesense:30.1 \
+  typesense/typesense:TYPESENSE_VERSION \
   --data-dir /data \
   --api-key=xyz \
   --enable-cors
@@ -77,27 +77,29 @@ TYPESENSE_PROTOCOL=http
 TYPESENSE_API_KEY=xyz
 ```
 
-### 4. Project Structure
+### 5. Project Structure
 
 ```text
+├── config/
+│   └── config.go            # Environment variable helpers and config (BookCollection, GetEnv, GetServerURL)
 ├── models/
 │   └── book.go              # Book model with GORM tags
 ├── routes/
 │   ├── books.go             # CRUD endpoints for books
 │   └── search.go            # Search and sync endpoints
-├── utils/
-│   ├── collections.go       # Typesense collection schema
-│   ├── database.go          # PostgreSQL database operations
-│   ├── env.go               # Environment variable helpers
-│   ├── sync.go              # Sync logic (incremental, full, soft delete)
-│   ├── sync_worker.go       # Background sync worker
-│   └── typesense.go         # Typesense client initialization
+├── search/
+│   ├── client.go            # Typesense client initialization
+│   ├── collections.go       # Typesense collection schema and document count
+│   ├── sync.go              # Sync logic (incremental, full, soft delete) and sync state
+│   └── worker.go            # Background sync worker and real-time sync helpers
+├── store/
+│   └── store.go             # PostgreSQL database operations via GORM
 ├── server.go                # Main application entry point
 ├── go.mod
 └── .env
 ```
 
-### 5. Start the development server
+### 6. Start the development server
 
 **Standard mode:**
 
@@ -252,21 +254,28 @@ Background Worker (Every 60s)
 
 #### Sync Strategies
 
-##### 1. Real-time Sync (Async)
+##### 1. Startup Sync (Smart)
+
+On every server start, the sync worker checks whether the Typesense collection already has documents:
+
+- **Typesense is empty** (first run or fresh instance): Seeds `lastSyncTime` to zero and runs a full sync — all records from PostgreSQL are pushed to Typesense.
+- **Typesense already has data** (restart): Seeds `lastSyncTime` from `MAX(updated_at)` of the PostgreSQL books table, then runs an incremental sync — only records changed since that timestamp are synced. This avoids re-syncing thousands of already-indexed records on every restart.
+
+##### 2. Real-time Sync (Async)
 
 - Triggered on: Create, Update, Delete operations
 - Non-blocking: API responds immediately
 - Runs in background goroutine
 - If fails: Background worker catches it within 60 seconds
 
-##### 2. Background Periodic Sync
+##### 3. Background Periodic Sync
 
 - Runs every 60 seconds automatically
 - Incremental: Only syncs books with `updated_at > lastSyncTime`
 - Handles soft deletes: Removes deleted books from Typesense
 - Efficient: Uses upsert to handle both inserts and updates
 
-##### 3. Manual Sync
+##### 4. Manual Sync
 
 - Endpoint: `POST /sync`
 - On-demand sync trigger
@@ -281,7 +290,7 @@ Background Worker (Every 60s)
 - **Memory Efficient**: Processes data in chunks to avoid loading entire dataset into memory
 - **Progress Tracking**: Logs progress for each page/batch processed
 
-**Configuration** (in `utils/sync.go`):
+**Configuration** (in `search/sync.go`):
 
 ```go
 type SyncConfig struct {
