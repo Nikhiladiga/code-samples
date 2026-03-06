@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/typesense/code-samples/typesense-gin-full-text-search/utils"
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/config"
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/search"
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/store"
 	"github.com/typesense/typesense-go/v4/typesense/api"
 	"github.com/typesense/typesense-go/v4/typesense/api/pointer"
 )
@@ -39,14 +41,14 @@ func searchBooks(c *gin.Context) {
 	}
 
 	// Perform search using the Typesense client
-	result, err := utils.Client.Collection(utils.BookCollection).Documents().Search(c.Request.Context(), searchParams)
+	result, err := search.Client.Collection(config.BookCollection).Documents().Search(c.Request.Context(), searchParams)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Search failed: " + err.Error(),
 			"debug": gin.H{
-				"collection": utils.BookCollection,
+				"collection": config.BookCollection,
 				"query":      query,
-				"server_url": utils.GetServerURL(),
+				"server_url": config.GetServerURL(),
 			},
 		})
 		return
@@ -67,10 +69,10 @@ func syncDatabaseToTypesense(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// Get last sync time from global state
-	lastSyncTime := utils.GetLastSyncTime()
+	lastSyncTime := search.GetLastSyncTime()
 
 	// Perform regular book sync (inserts and updates)
-	newSyncTime, err := utils.SyncBooksToTypesense(ctx, lastSyncTime)
+	newSyncTime, err := search.SyncBooksToTypesense(ctx, lastSyncTime)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Sync failed",
@@ -80,7 +82,7 @@ func syncDatabaseToTypesense(c *gin.Context) {
 	}
 
 	// Handle soft deletes
-	deletedBooks, err := utils.GetDeletedBooks(ctx, lastSyncTime)
+	deletedBooks, err := store.GetDeletedBooks(ctx, lastSyncTime)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to fetch deleted books",
@@ -95,7 +97,7 @@ func syncDatabaseToTypesense(c *gin.Context) {
 			deletedIDs = append(deletedIDs, book.ID)
 		}
 
-		if err := utils.SyncSoftDeletesToTypesense(ctx, deletedIDs); err != nil {
+		if err := search.SyncSoftDeletesToTypesense(ctx, deletedIDs); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "Failed to sync deletions",
 				"message": err.Error(),
@@ -105,7 +107,7 @@ func syncDatabaseToTypesense(c *gin.Context) {
 	}
 
 	// Update global sync time
-	utils.SetLastSyncTime(newSyncTime)
+	search.SetLastSyncTime(newSyncTime)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Sync completed",
@@ -117,10 +119,10 @@ func syncDatabaseToTypesense(c *gin.Context) {
 
 // getSyncStatus returns the current sync status
 func getSyncStatus(c *gin.Context) {
-	lastSyncTime := utils.GetLastSyncTime()
+	lastSyncTime := search.GetLastSyncTime()
 
 	c.JSON(http.StatusOK, gin.H{
 		"lastSyncTime":      lastSyncTime.Format(time.RFC3339),
-		"syncWorkerRunning": utils.IsSyncWorkerRunning(),
+		"syncWorkerRunning": search.IsSyncWorkerRunning(),
 	})
 }

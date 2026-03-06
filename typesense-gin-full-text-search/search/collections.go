@@ -1,9 +1,11 @@
-package utils
+package search
 
 import (
 	"context"
+	"fmt"
 	"log"
 
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/config"
 	"github.com/typesense/typesense-go/v4/typesense/api"
 	"github.com/typesense/typesense-go/v4/typesense/api/pointer"
 )
@@ -13,9 +15,8 @@ import (
 func InitializeCollections(ctx context.Context) error {
 	log.Println("Initializing Typesense collections...")
 
-	// Define the books collection schema
 	booksSchema := &api.CollectionSchema{
-		Name: BookCollection,
+		Name: config.BookCollection,
 		Fields: []api.Field{
 			{Name: "title", Type: "string", Facet: pointer.False()},
 			{Name: "authors", Type: "string[]", Facet: pointer.True()},
@@ -27,20 +28,27 @@ func InitializeCollections(ctx context.Context) error {
 		DefaultSortingField: pointer.String("ratings_count"),
 	}
 
-	// Try to retrieve the collection to check if it exists
-	_, err := Client.Collection(BookCollection).Retrieve(ctx)
+	_, err := Client.Collection(config.BookCollection).Retrieve(ctx)
 	if err != nil {
-		// Collection doesn't exist, create it
-		log.Printf("Collection '%s' not found, creating...", BookCollection)
+		log.Printf("Collection '%s' not found, creating...", config.BookCollection)
 		_, err = Client.Collections().Create(ctx, booksSchema)
 		if err != nil {
-			log.Printf("Failed to create collection '%s': %v", BookCollection, err)
-			return err
+			return fmt.Errorf("failed to create collection '%s': %w", config.BookCollection, err)
 		}
-		log.Printf("Collection '%s' created successfully", BookCollection)
+		log.Printf("Collection '%s' created successfully", config.BookCollection)
 	} else {
-		log.Printf("Collection '%s' already exists, skipping creation", BookCollection)
+		log.Printf("Collection '%s' already exists, skipping creation", config.BookCollection)
 	}
 
 	return nil
+}
+
+// CollectionDocumentCount returns the number of documents in the books collection.
+// Returns 0 on any error (treated as empty).
+func CollectionDocumentCount(ctx context.Context) int64 {
+	coll, err := Client.Collection(config.BookCollection).Retrieve(ctx)
+	if err != nil || coll.NumDocuments == nil {
+		return 0
+	}
+	return *coll.NumDocuments
 }

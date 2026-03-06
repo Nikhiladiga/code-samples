@@ -7,25 +7,27 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/config"
 	"github.com/typesense/code-samples/typesense-gin-full-text-search/routes"
-	"github.com/typesense/code-samples/typesense-gin-full-text-search/utils"
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/search"
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/store"
 )
 
 func main() {
 	// Initialize environment variables first (loads .env file)
-	utils.InitializeEnv()
+	config.InitializeEnv()
 
 	// Initialize Typesense client (depends on env vars being loaded)
-	utils.InitializeTypesenseClient()
+	search.InitializeClient()
 
-	// Connect to database (stores global DB instance in utils.DB)
-	utils.ConnectToDB(context.Background())
+	// Connect to database
+	store.ConnectToDB(context.Background())
 
 	// Initialize collections before starting the server
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := utils.InitializeCollections(ctx); err != nil {
+	if err := search.InitializeCollections(ctx); err != nil {
 		log.Fatalf("Failed to initialize collections: %v", err)
 	}
 
@@ -63,11 +65,11 @@ func main() {
 	routes.SetupBookRoutes(router)
 
 	// Start background sync worker
-	syncConfig := utils.DefaultSyncConfig()
-	syncConfig.EnableSoftDelete = true // Enable soft delete handling
-	go utils.StartSyncWorker(context.Background(), syncConfig)
+	syncConfig := search.DefaultSyncConfig()
+	syncConfig.EnableSoftDelete = true
+	go search.StartSyncWorker(context.Background(), syncConfig)
 
-	port := utils.GetEnv("PORT", "3000")
+	port := config.GetEnv("PORT", "3000")
 	log.Printf("Server starting on port %s", port)
 	log.Printf("Sync worker started with interval: %d seconds", syncConfig.SyncIntervalSec)
 	router.Run(":" + port)

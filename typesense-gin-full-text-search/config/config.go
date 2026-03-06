@@ -1,4 +1,4 @@
-package utils
+package config
 
 import (
 	"log"
@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	envLoaded = false
+	envLoaded      = false
+	BookCollection string
 )
 
 // InitializeEnv loads the .env file and initializes package-level variables
@@ -24,7 +25,7 @@ func InitializeEnv() {
 	envLoaded = true
 
 	// Initialize package-level variables that depend on environment
-	initializeBookCollection()
+	BookCollection = GetEnv("TYPESENSE_COLLECTION", "books")
 }
 
 // Helper functions to read environment variables with defaults
@@ -49,14 +50,4 @@ func GetServerURL() string {
 	host := GetEnv("TYPESENSE_HOST", "localhost")
 	port := GetEnvAsInt("TYPESENSE_PORT", 8108)
 	return protocol + "://" + host + ":" + strconv.Itoa(port)
-}
-
-// BookCollection holds the collection name for books
-// Initialized by InitializeEnv()
-var BookCollection string
-
-// initializeBookCollection sets the collection name from environment
-// Called by InitializeEnv() after .env is loaded
-func initializeBookCollection() {
-	BookCollection = GetEnv("TYPESENSE_COLLECTION", "books")
 }

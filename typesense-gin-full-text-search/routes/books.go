@@ -8,7 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/typesense/code-samples/typesense-gin-full-text-search/models"
-	"github.com/typesense/code-samples/typesense-gin-full-text-search/utils"
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/search"
+	"github.com/typesense/code-samples/typesense-gin-full-text-search/store"
 )
 
 // SetupBookRoutes configures all book CRUD routes
@@ -35,7 +36,7 @@ func createBook(c *gin.Context) {
 	}
 
 	// Save to database (source of truth)
-	if err := utils.SaveBook(c.Request.Context(), &book); err != nil {
+	if err := store.SaveBook(c.Request.Context(), &book); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to create book: " + err.Error(),
 		})
@@ -45,7 +46,7 @@ func createBook(c *gin.Context) {
 	// Sync to Typesense asynchronously (non-blocking)
 	go func(bookCopy models.Book) {
 		ctx := context.Background()
-		if err := utils.SyncBookOnUpdate(ctx, &bookCopy); err != nil {
+		if err := search.SyncBookOnUpdate(ctx, &bookCopy); err != nil {
 			log.Printf("Async Typesense sync failed for book %d: %v", bookCopy.ID, err)
 		}
 	}(book)
@@ -69,7 +70,7 @@ func getBook(c *gin.Context) {
 		return
 	}
 
-	book, err := utils.GetBookByID(c.Request.Context(), uri.ID)
+	book, err := store.GetBookByID(c.Request.Context(), uri.ID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Book not found",
@@ -99,7 +100,7 @@ func getAllBooks(c *gin.Context) {
 	}
 
 	// Get total count for pagination metadata
-	totalCount, err := utils.GetTotalBooksCount(c.Request.Context())
+	totalCount, err := store.GetTotalBooksCount(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch books count: " + err.Error(),
@@ -108,7 +109,7 @@ func getAllBooks(c *gin.Context) {
 	}
 
 	// Fetch paginated books
-	books, err := utils.GetAllBooksPaginated(c.Request.Context(), page, pageSize)
+	books, err := store.GetAllBooksPaginated(c.Request.Context(), page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch books: " + err.Error(),
@@ -139,7 +140,7 @@ func updateBook(c *gin.Context) {
 	}
 
 	// Fetch existing book
-	book, err := utils.GetBookByID(c.Request.Context(), uri.ID)
+	book, err := store.GetBookByID(c.Request.Context(), uri.ID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Book not found",
@@ -159,7 +160,7 @@ func updateBook(c *gin.Context) {
 	book.ID = uri.ID
 
 	// Save to database
-	if err := utils.SaveBook(c.Request.Context(), book); err != nil {
+	if err := store.SaveBook(c.Request.Context(), book); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update book: " + err.Error(),
 		})
@@ -169,7 +170,7 @@ func updateBook(c *gin.Context) {
 	// Sync to Typesense asynchronously (non-blocking)
 	go func(bookCopy models.Book) {
 		ctx := context.Background()
-		if err := utils.SyncBookOnUpdate(ctx, &bookCopy); err != nil {
+		if err := search.SyncBookOnUpdate(ctx, &bookCopy); err != nil {
 			log.Printf("Async Typesense sync failed for book %d: %v", bookCopy.ID, err)
 		}
 	}(*book)
@@ -194,7 +195,7 @@ func deleteBook(c *gin.Context) {
 	}
 
 	// Check if book exists
-	_, err := utils.GetBookByID(c.Request.Context(), uri.ID)
+	_, err := store.GetBookByID(c.Request.Context(), uri.ID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Book not found",
@@ -203,7 +204,7 @@ func deleteBook(c *gin.Context) {
 	}
 
 	// Soft delete from database
-	if err := utils.DeleteBook(c.Request.Context(), uri.ID); err != nil {
+	if err := store.DeleteBook(c.Request.Context(), uri.ID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete book: " + err.Error(),
 		})
@@ -213,7 +214,7 @@ func deleteBook(c *gin.Context) {
 	// Remove from Typesense asynchronously (non-blocking)
 	go func(bookID uint) {
 		ctx := context.Background()
-		if err := utils.SyncBookDeletionOnDelete(ctx, bookID); err != nil {
+		if err := search.SyncBookDeletionOnDelete(ctx, bookID); err != nil {
 			log.Printf("Async Typesense deletion failed for book %d: %v", bookID, err)
 		}
 	}(uri.ID)

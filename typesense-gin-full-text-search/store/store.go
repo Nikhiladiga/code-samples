@@ -1,4 +1,4 @@
-package utils
+package store
 
 import (
 	"context"
@@ -50,7 +50,6 @@ func GetBookByID(ctx context.Context, id uint) (*models.Book, error) {
 }
 
 // GetBooksByUpdatedAt fetches books updated after a given time
-// This is used for incremental sync to Typesense
 // WARNING: This loads all matching books into memory. For large result sets, use GetBooksByUpdatedAtPaginated.
 func GetBooksByUpdatedAt(ctx context.Context, since time.Time) ([]models.Book, error) {
 	var books []models.Book
@@ -62,7 +61,6 @@ func GetBooksByUpdatedAt(ctx context.Context, since time.Time) ([]models.Book, e
 }
 
 // GetBooksByUpdatedAtPaginated fetches books updated after a given time in pages
-// Returns books for the given page (1-indexed) with the specified page size
 func GetBooksByUpdatedAtPaginated(ctx context.Context, since time.Time, page int, pageSize int) ([]models.Book, error) {
 	var books []models.Book
 	offset := (page - 1) * pageSize
@@ -85,7 +83,7 @@ func GetUpdatedBooksCount(ctx context.Context, since time.Time) (int64, error) {
 	return count, err
 }
 
-// GetAllBooks fetches all books (for full import)
+// GetAllBooks fetches all books
 // WARNING: This loads all books into memory at once. For large datasets, use GetAllBooksPaginated instead.
 func GetAllBooks(ctx context.Context) ([]models.Book, error) {
 	var books []models.Book
@@ -94,14 +92,13 @@ func GetAllBooks(ctx context.Context) ([]models.Book, error) {
 }
 
 // GetAllBooksPaginated fetches books in pages for memory-efficient processing
-// Returns books for the given page (1-indexed) with the specified page size
 func GetAllBooksPaginated(ctx context.Context, page int, pageSize int) ([]models.Book, error) {
 	var books []models.Book
 	offset := (page - 1) * pageSize
 	err := DB.WithContext(ctx).
 		Offset(offset).
 		Limit(pageSize).
-		Order("id ASC"). // Consistent ordering for pagination
+		Order("id ASC").
 		Find(&books).Error
 	return books, err
 }
@@ -113,12 +110,22 @@ func GetTotalBooksCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+// GetLatestUpdatedAt returns the most recent updated_at timestamp across all books.
+// Used on startup to seed lastSyncTime so already-synced data is not re-synced.
+func GetLatestUpdatedAt(ctx context.Context) (time.Time, error) {
+	var result struct{ T time.Time }
+	err := DB.WithContext(ctx).
+		Model(&models.Book{}).
+		Select("MAX(updated_at) as t").
+		Scan(&result).Error
+	return result.T, err
+}
+
 // GetDeletedBooks fetches soft-deleted books since a given time
-// Uses updated_at to find books that were deleted (soft delete updates updated_at)
 func GetDeletedBooks(ctx context.Context, since time.Time) ([]models.Book, error) {
 	var books []models.Book
 	err := DB.WithContext(ctx).
-		Unscoped(). // Include soft-deleted records
+		Unscoped().
 		Where("deleted_at IS NOT NULL").
 		Where("updated_at > ?", since).
 		Find(&books).Error
@@ -136,9 +143,7 @@ func DeleteBook(ctx context.Context, id uint) error {
 }
 
 // BulkSaveBooks inserts or updates multiple books using gORM's Create with bulk insert
-// Note: For upsert (update on conflict), use database-specific syntax
 func BulkSaveBooks(ctx context.Context, books []models.Book) error {
-	// Begin transaction
 	tx := DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
@@ -150,16 +155,13 @@ func BulkSaveBooks(ctx context.Context, books []models.Book) error {
 }
 
 // BulkUpsertBooks performs PostgreSQL-specific upsert (ON CONFLICT)
-// This is more efficient than gORM's default Create for updates
 func BulkUpsertBooks(ctx context.Context, books []models.Book) error {
 	if len(books) == 0 {
 		return nil
 	}
 
-	// Hardcode table name - gORM pluralizes model name
 	tableName := "books"
 
-	// Build values string for INSERT
 	values := make([]string, 0, len(books))
 	args := make([]any, 0, len(books)*7)
 
@@ -168,8 +170,6 @@ func BulkUpsertBooks(ctx context.Context, books []models.Book) error {
 		args = append(args, book.ID, book.Title, book.Authors, book.PublicationYear, book.AverageRating, book.ImageUrl, book.RatingsCount)
 	}
 
-	// PostgreSQL ON CONFLICT query for upsert
-	// Updates all fields except id on conflict
 	query := fmt.Sprintf(`
 		INSERT INTO %s (id, title, authors, publication_year, average_rating, image_url, ratings_count)
 		VALUES %s
