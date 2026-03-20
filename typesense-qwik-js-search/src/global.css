@@ -1,0 +1,88 @@
+@import "tailwindcss";
+@import "instantsearch.css/themes/satellite.css";
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+  }
+}
+
+.heading-wrapper {
+  width: 100%;
+  text-align: center;
+  position: relative;
+  margin-top: 3rem;
+  margin-bottom: 2rem;
+  z-index: 0;
+}
+
+.heading-wrapper h1 {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem 0;
+  position: relative;
+  z-index: 1;
+}
+
+.heading-wrapper > div {
+  position: relative;
+  z-index: 1;
+}
+
+.heading-wrapper::after {
+  content: "";
+  background: linear-gradient(
+    135deg,
+    rgba(213, 43, 127, 0.4),
+    rgba(102, 126, 234, 0.4)
+  );
+  width: 300px;
+  height: 150px;
+  z-index: -1;
+  left: 50%;
+  transform: translateX(-50%);
+  position: absolute;
+  filter: blur(40px);
+  top: -50%;
+  animation: move 40s ease-out infinite;
+}
+
+#typesense {
+  color: #d52b7f;
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  text-decoration: none;
+  font-family: monospace;
+}
+
+#typesense:hover {
+  text-decoration: underline;
+}
+
+#qwikLogo {
+  display: inline-block;
+  width: clamp(80px, 10vw, 120px);
+  vertical-align: middle;
+  margin-left: 0.25rem;
+}
+
+@keyframes move {
+  0% {
+    transform: translate(0%) scale(1);
+  }
+  45% {
+    transform: translate(-40%, 20%) scale(1.2);
+  }
+  75% {
+    transform: translate(5%, 40%) scale(1.3);
+  }
+  90% {
+    transform: translate(-5%, 5%) scale(0.9);
+  }
+  100% {
+    transform: translate(0%) scale(1);
+  }
+}
