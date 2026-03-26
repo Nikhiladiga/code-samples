@@ -18,7 +18,6 @@
     "typesense-instantsearch-adapter": "^2.9.0"
   },
   "devDependencies": {
-    "@nuxtjs/tailwindcss": "^6.12.2",
     "@types/node": "^20"
   }
 }

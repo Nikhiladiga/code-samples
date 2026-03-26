@@ -2,7 +2,6 @@
 export default defineNuxtConfig({
   compatibilityDate: "2024-07-15",
   devtools: { enabled: true },
-  modules: ["@nuxtjs/tailwindcss"],
   runtimeConfig: {
     public: {
       typesense: {

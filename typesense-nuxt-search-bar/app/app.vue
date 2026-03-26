@@ -34,8 +34,8 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 py-8 px-4">
-    <div class="max-w-7xl mx-auto">
+  <div class="app-container">
+    <div class="app-content">
       <AisInstantSearch
         :search-client="typesenseAdapter.searchClient"
         :index-name="typesenseConfig.index"
@@ -47,3 +47,26 @@ useHead({
     </div>
   </div>
 </template>
+
+<style>
+* {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+</style>
+
+<style scoped>
+.app-container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 2rem 1rem;
+}
+
+.app-content {
+  max-width: 80rem;
+  margin: 0 auto;
+}
+</style>
