@@ -31,19 +31,53 @@ cd code-samples/typesense-nuxt-search-bar
 npm install
 ```
 
-### 3. Set up environment variables
+### 3. Set up Typesense and import data
 
-Create a `.env` file in the project root with the following content:
+#### Start Typesense Server (Local Development)
+
+```bash
+docker run -d -p 8108:8108 \
+  -v/tmp/typesense-data:/data typesense/typesense:27.1 \
+  --data-dir /data --api-key=xyz --enable-cors
+```
+
+#### Create Collection and Import Data
+
+The application expects a `books` collection with the following schema:
+
+```json
+{
+  "name": "books",
+  "fields": [
+    {"name": "title", "type": "string"},
+    {"name": "authors", "type": "string[]"},
+    {"name": "publication_year", "type": "int32"},
+    {"name": "average_rating", "type": "float"},
+    {"name": "ratings_count", "type": "int32"},
+    {"name": "image_url", "type": "string", "optional": true}
+  ]
+}
+```
+
+### 4. Set up environment variables
+
+Create a `.env` file in the project root (copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+Update the values in `.env`:
 
 ```env
-NUXT_PUBLIC_TYPESENSE_API_KEY=xxx
+NUXT_PUBLIC_TYPESENSE_API_KEY=xyz
 NUXT_PUBLIC_TYPESENSE_HOST=localhost
 NUXT_PUBLIC_TYPESENSE_PORT=8108
 NUXT_PUBLIC_TYPESENSE_PROTOCOL=http
 NUXT_PUBLIC_TYPESENSE_INDEX=books
 ```
 
-### 4. Project Structure
+### 5. Project Structure
 
 ```text
 ├── app
@@ -52,7 +86,6 @@ NUXT_PUBLIC_TYPESENSE_INDEX=books
 │   ├── BookCard.vue
 │   ├── BookList.vue
 │   ├── Heading.vue
-│   ├── Icons.vue
 │   └── SearchBar.vue
 ├── types
 │   └── Book.ts

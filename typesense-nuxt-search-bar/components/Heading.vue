@@ -1,6 +1,6 @@
 <template>
   <div class="Heading">
-    <h1>Nuxt.js Search Bar</h1>
+    <h1>NuxtJS Search Bar</h1>
     <div>
       powered by
       <a

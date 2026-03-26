@@ -7,18 +7,14 @@ import BookCard from "./BookCard.vue";
 <template>
   <ais-hits>
     <template #default="{ items }">
-      <div v-if="!items || items.length === 0" class="empty-state">
-        {{
-          items
-            ? "No books found. Try a different search term."
-            : "Start typing to search for books."
-        }}
+      <div v-if="items.length === 0" class="empty-state">
+        No books found. Try a different search term.
       </div>
       <div v-else class="book-list">
         <BookCard
           v-for="item in items"
           :key="item.objectID"
-          :book="item as unknown as Book"
+          :book="item as Book"
         />
       </div>
     </template>

@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import type { Book } from "../types/Book";
+import { ref } from "vue";
 
-defineProps<{
+const props = defineProps<{
   book: Book;
 }>();
 
-const handleImageError = (event: Event) => {
-  const target = event.target as HTMLImageElement;
-  target.src = "/book-placeholder.png";
+const imageError = ref(false);
+
+const handleImageError = () => {
+  imageError.value = true;
 };
 </script>
 
@@ -15,7 +17,7 @@ const handleImageError = (event: Event) => {
   <div class="book-card">
     <div class="book-image-container">
       <img
-        v-if="book.image_url"
+        v-if="book.image_url && !imageError"
         :src="book.image_url"
         :alt="book.title"
         class="book-image"
@@ -25,17 +27,15 @@ const handleImageError = (event: Event) => {
     </div>
     <div class="book-info">
       <h3 class="book-title">{{ book.title }}</h3>
-      <p class="book-author">By: {{ book.authors?.join(", ") }}</p>
-      <p v-if="book.publication_year" class="book-year">
-        Published: {{ book.publication_year }}
-      </p>
+      <p class="book-author">By: {{ book.authors.join(", ") }}</p>
+      <p class="book-year">Published: {{ book.publication_year }}</p>
       <div class="rating-container">
         <div class="star-rating">
-          {{ "★".repeat(Math.round(book.average_rating || 0)) }}
+          {{ "★".repeat(Math.round(book.average_rating)) }}
         </div>
         <span class="rating-text">
-          {{ book.average_rating?.toFixed(1) }} ({{
-            book.ratings_count?.toLocaleString()
+          {{ book.average_rating.toFixed(1) }} ({{
+            book.ratings_count.toLocaleString()
           }}
           ratings)
         </span>
@@ -51,13 +51,15 @@ const handleImageError = (event: Event) => {
   padding: 1.5rem;
   background-color: white;
   border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transition: box-shadow 200ms ease-in-out;
 }
 
 .book-card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
