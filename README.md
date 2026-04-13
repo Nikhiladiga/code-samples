@@ -8,6 +8,7 @@ This is a monorepo containing multiple standalone projects. Each project lives i
 
 ```plaintext
 code-samples/
+├── typesense-angular-search-bar/         # Angular + Typesense search implementation
 ├── typesense-astro-search/              # Astro + Typesense search implementation
 ├── typesense-gin-full-text-search/      # Go (Gin) + Typesense backend implementation
 ├── typesense-next-search-bar/           # Next.js + Typesense search implementation
@@ -23,6 +24,7 @@ code-samples/
 
 | Project                                                                      | Framework     | Description                                                     |
 | ---------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------- |
+| [typesense-angular-search-bar](./typesense-angular-search-bar)               | Angular       | A modern search bar with instant search capabilities            |
 | [typesense-astro-search](./typesense-astro-search)                           | Astro         | A modern search bar with instant search capabilities            |
 | [typesense-gin-full-text-search](./typesense-gin-full-text-search)           | Go (Gin)      | Backend API with full-text search using Typesense               |
 | [typesense-next-search-bar](./typesense-next-search-bar)                     | Next.js       | A modern search bar with instant search capabilities            |

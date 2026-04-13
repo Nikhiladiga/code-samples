@@ -1,0 +1,11 @@
+.app-container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 2rem 1rem;
+}
+
+ais-instantsearch {
+  display: block;
+  max-width: 80rem;
+  margin: 0 auto;
+}
