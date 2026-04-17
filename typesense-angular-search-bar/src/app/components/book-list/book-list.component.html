@@ -1,0 +1,9 @@
+@if (hasSearched && hits.length === 0) {
+  <div class="empty-state">No books found. Try a different search term.</div>
+} @else {
+  <div class="book-list">
+    @for (hit of hits; track hit.id) {
+      <app-book-card [book]="hit" />
+    }
+  </div>
+}

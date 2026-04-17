@@ -1,0 +1,47 @@
+<div class="search-container">
+  <div class="search-form">
+    <button class="search-button" type="button">
+      <svg
+        class="search-icon"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        ></path>
+      </svg>
+    </button>
+
+    <input
+      type="search"
+      class="search-input"
+      [value]="query"
+      (input)="onSearch($event)"
+      placeholder="Search for books by title or author..."
+    />
+
+    @if (query) {
+      <button class="reset-button" type="button" (click)="onReset()">
+        <svg
+          class="close-icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          ></path>
+        </svg>
+      </button>
+    }
+  </div>
+</div>

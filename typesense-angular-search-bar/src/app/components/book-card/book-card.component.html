@@ -1,0 +1,30 @@
+<div class="book-card">
+  <div class="book-image-container">
+    @if (book.image_url) {
+      <img
+        [src]="book.image_url"
+        [alt]="book.title"
+        class="book-image"
+        (error)="onImageError($event)"
+      />
+    } @else {
+      <div class="no-image">No Image</div>
+    }
+  </div>
+
+  <div class="book-info">
+    <h3 class="book-title">{{ book.title }}</h3>
+    <p class="book-author">By: {{ authorList }}</p>
+
+    @if (book.publication_year) {
+      <p class="book-year">Published: {{ book.publication_year }}</p>
+    }
+
+    <div class="rating-container">
+      <div class="star-rating">{{ stars }}</div>
+      <span class="rating-text">
+        {{ formattedRating }} ({{ formattedRatingsCount }} ratings)
+      </span>
+    </div>
+  </div>
+</div>
