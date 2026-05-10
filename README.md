@@ -19,6 +19,7 @@ code-samples/
 ├── typesense-springboot-full-text-search/      # Spring Boot + Typesense backend implementation
 ├── typesense-node-prisma-full-text-search/     # Node.js (Express) + Typesense + Prisma backend implementation
 ├── typesense-node-sequelize-full-text-search/  # Node.js (Express) + Typesense + Sequelize backend implementation
+├── typesense-node-drizzle-full-text-search/    # Node.js (Express) + Typesense + Drizzle backend implementation
 ├── typesense-vanilla-js-search/                # Vanilla JS + Typesense search implementation
 └── README.md                                   # You are here
 ```
@@ -38,6 +39,7 @@ code-samples/
 | [typesense-springboot-full-text-search](./typesense-springboot-full-text-search) | Spring Boot | Backend API with full-text search using Typesense               |
 | [typesense-node-prisma-full-text-search](./typesense-node-prisma-full-text-search)     | Node.js (Express) + Typesense + Prisma | Backend API with full-text search using Typesense               |
 | [typesense-node-sequelize-full-text-search](./typesense-node-sequelize-full-text-search) | Node.js (Express) + Typesense + Sequelize | Backend API with full-text search using Typesense               |
+| [typesense-node-drizzle-search-app](./typesense-node-drizzle-search-app)     | Node.js (Express) + Typesense + Drizzle | Backend API with full-text search using Typesense               |
 | [typesense-vanilla-js-search](./typesense-vanilla-js-search)                 | Vanilla JS    | A modern search bar with instant search capabilities            |
 
 ## Getting Started
