@@ -8,17 +8,18 @@ This is a monorepo containing multiple standalone projects. Each project lives i
 
 ```plaintext
 code-samples/
-├── typesense-angular-search-bar/         # Angular + Typesense search implementation
-├── typesense-astro-search/              # Astro + Typesense search implementation
-├── typesense-gin-full-text-search/      # Go (Gin) + Typesense backend implementation
-├── typesense-next-search-bar/           # Next.js + Typesense search implementation
-├── typesense-nuxt-search-bar/           # Nuxt.js + Typesense search implementation
-├── typesense-qwik-js-search/            # Qwik + Typesense search implementation
-├── typesense-react-native-search-bar/   # React Native + Typesense search implementation
-├── typesense-solid-js-search/           # SolidJS + Typesense search implementation
-├── typesense-springboot-full-text-search/ # Spring Boot + Typesense backend implementation
-├── typesense-vanilla-js-search/         # Vanilla JS + Typesense search implementation
-└── README.md                            # You are here
+├── typesense-angular-search-bar/           # Angular + Typesense search implementation
+├── typesense-astro-search/                 # Astro + Typesense search implementation
+├── typesense-gin-full-text-search/         # Go (Gin) + Typesense backend implementation
+├── typesense-next-search-bar/              # Next.js + Typesense search implementation
+├── typesense-nuxt-search-bar/              # Nuxt.js + Typesense search implementation
+├── typesense-qwik-js-search/               # Qwik + Typesense search implementation
+├── typesense-react-native-search-bar/      # React Native + Typesense search implementation
+├── typesense-solid-js-search/              # SolidJS + Typesense search implementation
+├── typesense-springboot-full-text-search/  # Spring Boot + Typesense backend implementation
+├── typesense-node-sequelize-search-app/    # Node.js (Express) + Typesense + Sequelize backend implementation
+├── typesense-vanilla-js-search/            # Vanilla JS + Typesense search implementation
+└── README.md                               # You are here
 ```
 
 ## Projects
@@ -34,6 +35,7 @@ code-samples/
 | [typesense-react-native-search-bar](./typesense-react-native-search-bar)     | React Native  | A mobile search bar with instant search capabilities            |
 | [typesense-solid-js-search](./typesense-solid-js-search)                     | SolidJS       | A modern search bar with instant search capabilities            |
 | [typesense-springboot-full-text-search](./typesense-springboot-full-text-search) | Spring Boot | Backend API with full-text search using Typesense               |
+| [typesense-node-sequelize-search-app](./typesense-node-sequelize-search-app)   | Node.js (Express) + Typesense + Sequelize | Backend API with full-text search using Typesense               |
 | [typesense-vanilla-js-search](./typesense-vanilla-js-search)                 | Vanilla JS    | A modern search bar with instant search capabilities            |
 
 ## Getting Started
