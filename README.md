@@ -11,6 +11,7 @@ code-samples/
 ├── typesense-angular-search-bar/               # Angular + Typesense search implementation
 ├── typesense-astro-search/                     # Astro + Typesense search implementation
 ├── typesense-gin-full-text-search/             # Go (Gin) + Typesense backend implementation
+├── typesense-kotlin/                           # Kotlin (Android) + Typesense search implementation
 ├── typesense-next-search-bar/                  # Next.js + Typesense search implementation
 ├── typesense-nuxt-search-bar/                  # Nuxt.js + Typesense search implementation
 ├── typesense-qwik-js-search/                   # Qwik + Typesense search implementation
@@ -31,6 +32,7 @@ code-samples/
 | [typesense-angular-search-bar](./typesense-angular-search-bar)               | Angular       | A modern search bar with instant search capabilities            |
 | [typesense-astro-search](./typesense-astro-search)                           | Astro         | A modern search bar with instant search capabilities            |
 | [typesense-gin-full-text-search](./typesense-gin-full-text-search)           | Go (Gin)      | Backend API with full-text search using Typesense               |
+| [typesense-kotlin](./typesense-kotlin)                                       | Kotlin (Android) | A native Android search bar with instant search capabilities    |
 | [typesense-next-search-bar](./typesense-next-search-bar)                     | Next.js       | A modern search bar with instant search capabilities            |
 | [typesense-nuxt-search-bar](./typesense-nuxt-search-bar)                     | Nuxt.js       | A modern search bar with instant search capabilities            |
 | [typesense-qwik-js-search](./typesense-qwik-js-search)                       | Qwik          | Resumable search bar with real-time search and modern UI        |
