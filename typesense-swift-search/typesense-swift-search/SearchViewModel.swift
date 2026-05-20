@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Typesense
 
 @MainActor
 class SearchViewModel: ObservableObject {
@@ -7,10 +8,15 @@ class SearchViewModel: ObservableObject {
     @Published var results: [Book] = []
     @Published var isSearching = false
     
+    private let client: Client
     private var searchTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
     
     init() {
+        let node = Node(host: TypesenseConfig.host, port: TypesenseConfig.port, nodeProtocol: TypesenseConfig.scheme)
+        let config = Configuration(nodes: [node], apiKey: TypesenseConfig.apiKey)
+        self.client = Client(config: config)
+        
         $searchText
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
             .removeDuplicates()
@@ -45,18 +51,12 @@ class SearchViewModel: ObservableObject {
     }
     
     private func performSearch(query: String) async throws -> [Book] {
-        var urlComponents = URLComponents(url: TypesenseConfig.baseURL.appendingPathComponent("collections/\(TypesenseConfig.collection)/documents/search"), resolvingAgainstBaseURL: false)!
+        let searchParameters = SearchParameters(q: query, queryBy: "title,authors")
+        let (searchResult, _) = try await client
+            .collection(name: TypesenseConfig.collection)
+            .documents()
+            .search(searchParameters, for: Book.self)
         
-        urlComponents.queryItems = [
-            URLQueryItem(name: "q", value: query),
-            URLQueryItem(name: "query_by", value: "title,authors")
-        ]
-        
-        var request = URLRequest(url: urlComponents.url!)
-        request.addValue(TypesenseConfig.apiKey, forHTTPHeaderField: "X-TYPESENSE-API-KEY")
-        
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let response = try JSONDecoder().decode(TypesenseSearchResult.self, from: data)
-        return response.hits.map { $0.document }
+        return searchResult?.hits?.compactMap { $0.document } ?? []
     }
 }

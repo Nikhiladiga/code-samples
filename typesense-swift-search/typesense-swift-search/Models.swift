@@ -15,11 +15,3 @@ struct Book: Identifiable, Codable {
         case imageUrl = "image_url"
     }
 }
-
-struct TypesenseSearchResult: Codable {
-    let hits: [TypesenseHit]
-}
-
-struct TypesenseHit: Codable {
-    let document: Book
-}

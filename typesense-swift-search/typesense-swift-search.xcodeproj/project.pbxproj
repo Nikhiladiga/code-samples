@@ -65,6 +65,7 @@
 			);
 			name = "typesense-swift-search";
 			packageProductDependencies = (
+				84B32BB02FBB0FEB00CCFCF8 /* Typesense */,
 			);
 			productName = "typesense-swift-search";
 			productReference = 84B32B942FBB0FE600CCFCF8 /* typesense-swift-search.app */;
@@ -101,6 +102,9 @@
 			targets = (
 				84B32B932FBB0FE600CCFCF8 /* typesense-swift-search */,
 			);
+			packageReferences = (
+				84B32BAF2FBB0FEB00CCFCF8 /* XCRemoteSwiftPackageReference "typesense-swift" */,
+			);
 		};
 /* End PBXProject section */
 
@@ -123,6 +127,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		84B32BAF2FBB0FEB00CCFCF8 /* XCRemoteSwiftPackageReference "typesense-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/typesense/typesense-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		84B32BB02FBB0FEB00CCFCF8 /* Typesense */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 84B32BAF2FBB0FEB00CCFCF8 /* XCRemoteSwiftPackageReference "typesense-swift" */;
+			productName = Typesense;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		84B32B9D2FBB0FEA00CCFCF8 /* Debug */ = {
