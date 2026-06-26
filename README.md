@@ -16,6 +16,7 @@ code-samples/
 ├── typesense-qwik-js-search/            # Qwik + Typesense search implementation
 ├── typesense-react-native-search-bar/   # React Native + Typesense search implementation
 ├── typesense-solid-js-search/           # SolidJS + Typesense search implementation
+├── typesense-springboot-full-text-search/ # Spring Boot + Typesense backend implementation
 ├── typesense-vanilla-js-search/         # Vanilla JS + Typesense search implementation
 └── README.md                            # You are here
 ```
@@ -32,6 +33,7 @@ code-samples/
 | [typesense-qwik-js-search](./typesense-qwik-js-search)                       | Qwik          | Resumable search bar with real-time search and modern UI        |
 | [typesense-react-native-search-bar](./typesense-react-native-search-bar)     | React Native  | A mobile search bar with instant search capabilities            |
 | [typesense-solid-js-search](./typesense-solid-js-search)                     | SolidJS       | A modern search bar with instant search capabilities            |
+| [typesense-springboot-full-text-search](./typesense-springboot-full-text-search) | Spring Boot | Backend API with full-text search using Typesense               |
 | [typesense-vanilla-js-search](./typesense-vanilla-js-search)                 | Vanilla JS    | A modern search bar with instant search capabilities            |
 
 ## Getting Started
