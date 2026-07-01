@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#1A1A1A</color>
+    <color name="card_background">#2A2A2A</color>
+    <color name="search_background">#333333</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0B0B0</color>
+    <color name="text_tertiary">#808080</color>
+    <color name="typesense_pink">#EF5350</color>
+    <color name="react_blue">#61DAFB</color>
+    <color name="kotlin_purple">#7F52FF</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
