@@ -1,0 +1,10 @@
+pandas
+typesense
+sentence-transformers
+langchain
+langchain-openai
+fastapi
+uvicorn
+requests
+python-dotenv
+chainlit
