@@ -10,6 +10,7 @@ This is a monorepo containing multiple standalone projects. Each project lives i
 code-samples/
 ├── typesense-angular-search-bar/               # Angular + Typesense search implementation
 ├── typesense-astro-search/                     # Astro + Typesense search implementation
+├── typesense-django-full-text-search/            # Python (Django) + Typesense backend implementation
 ├── typesense-gin-full-text-search/             # Go (Gin) + Typesense backend implementation
 ├── typesense-kotlin/                           # Kotlin (Android) + Typesense search implementation
 ├── typesense-langchain-ai-search/              # Python + LangChain + Typesense AI search implementation
@@ -34,6 +35,7 @@ code-samples/
 | ---------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------- |
 | [typesense-angular-search-bar](./typesense-angular-search-bar)               | Angular       | A modern search bar with instant search capabilities            |
 | [typesense-astro-search](./typesense-astro-search)                           | Astro         | A modern search bar with instant search capabilities            |
+| [typesense-django-full-text-search](./typesense-django-full-text-search)     | Python (Django) | Backend API with full-text search using Typesense             |
 | [typesense-gin-full-text-search](./typesense-gin-full-text-search)           | Go (Gin)      | Backend API with full-text search using Typesense               |
 | [typesense-kotlin](./typesense-kotlin)                                       | Kotlin (Android) | A native Android search bar with instant search capabilities    |
 | [typesense-langchain-ai-search](./typesense-langchain-ai-search)             | LangChain (Python) | Conversational AI-powered movie search and recommendation app   |
