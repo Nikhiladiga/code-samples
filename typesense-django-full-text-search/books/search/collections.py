@@ -1,4 +1,7 @@
+import logging
 from .client import typesense_client
+
+logger = logging.getLogger(__name__)
 
 BOOKS_COLLECTION_NAME = 'books'
 
@@ -21,11 +24,10 @@ def initialize_typesense():
         collection_exists = any(c['name'] == BOOKS_COLLECTION_NAME for c in collections)
 
         if not collection_exists:
-            print(f"Creating collection {BOOKS_COLLECTION_NAME}...")
+            logger.info('Creating collection %s...', BOOKS_COLLECTION_NAME)
             typesense_client.collections.create(books_collection_schema)
-            print(f"Collection {BOOKS_COLLECTION_NAME} created successfully.")
+            logger.info('Collection %s created successfully.', BOOKS_COLLECTION_NAME)
         else:
-            print(f"Collection {BOOKS_COLLECTION_NAME} already exists.")
+            logger.info('Collection %s already exists.', BOOKS_COLLECTION_NAME)
     except Exception as e:
-        print(f"Error initializing Typesense collection: {e}")
-        # Not throwing the error to prevent app crash if Typesense is down
+        logger.error('Error initializing Typesense collection: %s', e)
