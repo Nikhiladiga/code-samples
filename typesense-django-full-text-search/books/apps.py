@@ -1,5 +1,8 @@
 import sys
+import logging
 from django.apps import AppConfig
+
+logger = logging.getLogger(__name__)
 
 class BooksConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -7,11 +10,9 @@ class BooksConfig(AppConfig):
 
     def ready(self):
         # Avoid running during management commands (like migrate, makemigrations)
-        if 'manage.py' in sys.argv:
-            if 'runserver' not in sys.argv:
-                return
-        
-        # Import inside ready() to avoid AppRegistryNotReady errors
+        if 'manage.py' in sys.argv and 'runserver' not in sys.argv:
+            return
+
         from .search import (
             initialize_typesense,
             determine_and_run_startup_sync,
@@ -19,28 +20,22 @@ class BooksConfig(AppConfig):
         )
         import threading
 
-        # Run Typesense initialization and sync in a background thread
-        # to avoid blocking Django startup.
         def _startup_sequence():
             try:
-                print('Initializing Typesense...')
+                logger.info('Initializing Typesense...')
                 initialize_typesense()
-                
-                print('Running startup sync...')
+
+                logger.info('Running startup sync...')
                 try:
                     determine_and_run_startup_sync()
                 except Exception as sync_err:
-                    print(f"Startup sync skipped (database might not be migrated yet): {sync_err}")
-                
+                    logger.warning('Startup sync skipped (database might not be migrated yet): %s', sync_err)
+
                 start_background_sync_worker()
             except Exception as e:
-                print(f"Failed to start background sync worker: {e}")
+                logger.error('Failed to start background sync worker: %s', e)
 
-        # In development with autoreload, ready() is called twice. 
-        # Using a background thread ensures we don't block the main thread.
-        # But we only want to run it once.
         import os
         if os.environ.get('RUN_MAIN') == 'true' or not sys.argv[0].endswith('manage.py'):
-            # Only run if we are in the main worker process (e.g., when RUN_MAIN is set by autoreloader)
             thread = threading.Thread(target=_startup_sequence, daemon=True)
             thread.start()
