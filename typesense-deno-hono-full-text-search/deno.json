@@ -1,0 +1,28 @@
+{
+  "name": "typesense-deno-hono-full-text-search",
+  "version": "1.0.0",
+  "exports": "./src/server.ts",
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --allow-read --allow-sys --env-file=.env --watch src/server.ts",
+    "start": "deno run --allow-net --allow-env --allow-read --allow-sys --env-file=.env src/server.ts",
+    "db:migrate": "deno run --allow-net --allow-env --allow-read --allow-sys --env-file=.env src/migrate.ts",
+    "check": "deno check src/server.ts src/migrate.ts"
+  },
+  "imports": {
+    "hono": "jsr:@hono/hono@^4.13.4",
+    "hono/cors": "jsr:@hono/hono@^4.13.4/cors",
+    "postgres": "npm:postgres@^3.4.9",
+    "typesense": "npm:typesense@^3.0.6"
+  },
+  "compilerOptions": {
+    "strict": true
+  },
+  "fmt": {
+    "include": [
+      "src/"
+    ],
+    "lineWidth": 100,
+    "singleQuote": true
+  },
+  "nodeModulesDir": "auto"
+}

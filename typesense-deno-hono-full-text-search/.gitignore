@@ -1,0 +1,4 @@
+.env
+deno.lock
+node_modules/
+typesense-data/
