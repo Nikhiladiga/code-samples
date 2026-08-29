@@ -116,6 +116,10 @@ func SyncAllBooksToTypesense(ctx context.Context) error {
 func SyncBooksToTypesense(ctx context.Context, lastSyncTime time.Time) (time.Time, error) {
 	log.Printf("Starting incremental sync from database to Typesense since %s", lastSyncTime.Format(time.RFC3339))
 
+	// Stamp the time before reading anything. Taking it at the end would exclude
+	// rows changed while the sync was running, and they would never be retried.
+	syncStartedAt := time.Now()
+
 	cfg := DefaultSyncConfig()
 
 	updatedCount, err := store.GetUpdatedBooksCount(ctx, lastSyncTime)
@@ -125,7 +129,7 @@ func SyncBooksToTypesense(ctx context.Context, lastSyncTime time.Time) (time.Tim
 
 	if updatedCount == 0 {
 		log.Println("No changes to sync")
-		return time.Now(), nil
+		return syncStartedAt, nil
 	}
 
 	log.Printf("Found %d books to sync (processing in batches of %d)", updatedCount, cfg.PageSize)
@@ -189,10 +193,15 @@ func SyncBooksToTypesense(ctx context.Context, lastSyncTime time.Time) (time.Tim
 	log.Printf("Incremental sync completed: %d documents upserted, %d failed out of %d total",
 		totalSuccess, totalFailure, updatedCount)
 
-	newSyncTime := time.Now()
-	log.Printf("Last sync time updated to: %s", newSyncTime.Format(time.RFC3339))
+	// Only advance the sync time when every document made it. Advancing after a
+	// partial failure would skip the failed rows forever.
+	if totalFailure > 0 {
+		return lastSyncTime, fmt.Errorf("%d documents failed to import; last sync time left unchanged", totalFailure)
+	}
 
-	return newSyncTime, nil
+	log.Printf("Last sync time updated to: %s", syncStartedAt.Format(time.RFC3339))
+
+	return syncStartedAt, nil
 }
 
 // SyncSoftDeletesToTypesense removes deleted books from Typesense

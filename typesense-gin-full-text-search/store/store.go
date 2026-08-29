@@ -110,17 +110,6 @@ func GetTotalBooksCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
-// GetLatestUpdatedAt returns the most recent updated_at timestamp across all books.
-// Used on startup to seed lastSyncTime so already-synced data is not re-synced.
-func GetLatestUpdatedAt(ctx context.Context) (time.Time, error) {
-	var result struct{ T time.Time }
-	err := DB.WithContext(ctx).
-		Model(&models.Book{}).
-		Select("MAX(updated_at) as t").
-		Scan(&result).Error
-	return result.T, err
-}
-
 // GetDeletedBooks fetches soft-deleted books since a given time
 func GetDeletedBooks(ctx context.Context, since time.Time) ([]models.Book, error) {
 	var books []models.Book

@@ -9,9 +9,13 @@ const BATCH_SIZE = 1000;
 
 export async function runFullSync() {
   console.log('Running full sync...');
+  // Stamp the time before reading anything. Taking it at the end would exclude
+  // rows changed while the sync was running, and they would never be retried.
+  const syncStartedAt = new Date();
   let lastId = 0;
   let hasMore = true;
   let totalProcessed = 0;
+  let failed = false;
 
   while (hasMore) {
     let books: Book[];
@@ -24,6 +28,7 @@ export async function runFullSync() {
       });
     } catch (err) {
       console.error('Database error during full sync fetching:', err);
+      failed = true;
       break; // Abort this sync run gracefully on DB failure
     }
 
@@ -51,29 +56,48 @@ export async function runFullSync() {
     } catch (err) {
       console.error('Error importing documents during full sync', err);
       // We can choose to break or continue here; breaking is safer on Typesense errors
+      failed = true;
       break; 
     }
   }
 
-  // Update lastSyncTime to now
-  lastSyncTime = new Date();
+  // Only advance lastSyncTime when the whole run succeeded, so a partial
+  // failure is retried on the next run instead of being skipped forever.
+  if (failed) {
+    console.warn(`Full sync incomplete; lastSyncTime stays at ${lastSyncTime.toISOString()}`);
+    return;
+  }
+
+  lastSyncTime = syncStartedAt;
   console.log('Full sync completed.');
 }
 
 export async function runIncrementalSync() {
-  console.log(`Running incremental sync since ${lastSyncTime.toISOString()}...`);
-  
-  // 1. Find newly created or updated books
-  const updatedBooks = await Book.findAll({
-    where: {
-      updated_at: {
-        [Op.gt]: lastSyncTime,
-      },
-    },
-    paranoid: true, // Only active
-  });
+  // Stamp the time before reading anything, and hold the window open against
+  // the previous stamp for the whole run.
+  const syncStartedAt = new Date();
+  const since = lastSyncTime;
+  console.log(`Running incremental sync since ${since.toISOString()}...`);
 
-  if (updatedBooks.length > 0) {
+  let failed = false;
+
+  // 1. Find newly created or updated books
+  let updatedBooks: Book[] = [];
+  try {
+    updatedBooks = await Book.findAll({
+      where: {
+        updated_at: {
+          [Op.gt]: since,
+        },
+      },
+      paranoid: true, // Only active
+    });
+  } catch (err) {
+    console.error('Database error during incremental sync upsert fetching:', err);
+    failed = true;
+  }
+
+  if (!failed && updatedBooks.length > 0) {
     const documents = updatedBooks.map((b) => ({
       id: b.id.toString(),
       title: b.title,
@@ -89,20 +113,29 @@ export async function runIncrementalSync() {
       console.log(`Incremental sync: Upserted ${documents.length} books.`);
     } catch (err) {
       console.error('Error upserting documents in incremental sync', err);
+      failed = true;
     }
   }
 
   // 2. Find soft-deleted books
-  const deletedBooks = await Book.findAll({
-    where: {
-      deleted_at: {
-        [Op.gt]: lastSyncTime,
-      },
-    },
-    paranoid: false, // Include soft-deleted
-  });
+  let deletedBooks: Book[] = [];
+  if (!failed) {
+    try {
+      deletedBooks = await Book.findAll({
+        where: {
+          deleted_at: {
+            [Op.gt]: since,
+          },
+        },
+        paranoid: false, // Include soft-deleted
+      });
+    } catch (err) {
+      console.error('Database error during incremental sync delete fetching:', err);
+      failed = true;
+    }
+  }
 
-  if (deletedBooks.length > 0) {
+  if (!failed && deletedBooks.length > 0) {
     for (const book of deletedBooks) {
       try {
         await typesenseClient.collections(BOOKS_COLLECTION_NAME).documents(book.id.toString()).delete();
@@ -112,12 +145,19 @@ export async function runIncrementalSync() {
         const error = err as { httpStatus?: number };
         if (error.httpStatus !== 404) {
           console.error(`Error deleting book ${book.id} from Typesense`, err);
+          failed = true;
         }
       }
     }
   }
 
-  lastSyncTime = new Date();
+  // Only advance lastSyncTime when the whole run succeeded.
+  if (failed) {
+    console.warn(`Incremental sync incomplete; lastSyncTime stays at ${lastSyncTime.toISOString()}`);
+    return;
+  }
+
+  lastSyncTime = syncStartedAt;
   console.log('Incremental sync completed.');
 }
 
@@ -130,16 +170,10 @@ export async function determineAndRunStartupSync() {
       // Empty Typesense collection, full sync
       await runFullSync();
     } else {
-      // Typesense has data, get latest updated_at from DB
-      const latestBook = await Book.findOne({
-        order: [['updated_at', 'DESC']],
-        paranoid: false, // Check across all records
-      });
-
-      if (latestBook?.updated_at) {
-        lastSyncTime = latestBook.updated_at;
-      }
-      
+      // Typesense has data. Catch up from epoch so records that changed while
+      // the server was down are backfilled. Seeding from MAX(updated_at) would
+      // make the incremental query match zero rows by construction.
+      lastSyncTime = new Date(0);
       await runIncrementalSync();
     }
   } catch (error) {

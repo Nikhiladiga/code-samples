@@ -26,25 +26,12 @@ func StartSyncWorker(ctx context.Context, cfg *SyncConfig) {
 	workerStartedOnce.Do(func() {
 		time.Sleep(2 * time.Second)
 
-		if CollectionDocumentCount(workerCtx) > 0 {
-			// Typesense already has data — seed from DB's latest updated_at
-			// so we only pick up records changed since the last known state.
-			if latest, err := store.GetLatestUpdatedAt(workerCtx); err == nil && !latest.IsZero() {
-				SetLastSyncTime(latest)
-				log.Printf("Typesense already populated, seeding sync time from DB: %s", latest.Format(time.RFC3339))
-			}
-		} else {
-			// Typesense is empty — full sync from zero time
-			log.Printf("Typesense collection is empty, running full sync")
-		}
-
-		lastSyncTime := GetLastSyncTime()
-		if newSyncTime, err := SyncBooksToTypesense(workerCtx, lastSyncTime); err != nil {
-			log.Printf("Initial sync failed: %v", err)
-		} else {
-			SetLastSyncTime(newSyncTime)
-			log.Printf("Initial sync completed at %s", newSyncTime.Format(time.RFC3339))
-		}
+		// Always catch up from the zero time on boot so records that changed
+		// while the server was down are backfilled. Seeding from the DB's
+		// MAX(updated_at) would make the incremental query "find rows newer
+		// than the newest row", which matches nothing by construction.
+		log.Printf("Running initial catch-up sync from %s", GetLastSyncTime().Format(time.RFC3339))
+		runSyncCycle(workerCtx, cfg)
 	})
 
 	ticker := time.NewTicker(time.Duration(cfg.SyncIntervalSec) * time.Second)
@@ -54,17 +41,7 @@ func StartSyncWorker(ctx context.Context, cfg *SyncConfig) {
 		select {
 		case <-ticker.C:
 			log.Printf("Running periodic sync...")
-			lastSyncTime := GetLastSyncTime()
-			if newSyncTime, err := SyncBooksToTypesense(workerCtx, lastSyncTime); err != nil {
-				log.Printf("Periodic sync failed: %v", err)
-			} else {
-				SetLastSyncTime(newSyncTime)
-			}
-			if cfg.EnableSoftDelete {
-				if err := handleSoftDeletes(workerCtx, lastSyncTime); err != nil {
-					log.Printf("Soft delete sync failed: %v", err)
-				}
-			}
+			runSyncCycle(workerCtx, cfg)
 		case <-workerCtx.Done():
 			log.Println("Sync worker stopped")
 			SetSyncWorkerRunning(false)
@@ -78,6 +55,27 @@ func StopSyncWorker() {
 	if workerCancel != nil {
 		workerCancel()
 	}
+}
+
+// runSyncCycle performs one upsert pass and one soft-delete pass over the same
+// window, and only advances the sync time when both succeeded.
+func runSyncCycle(ctx context.Context, cfg *SyncConfig) {
+	lastSyncTime := GetLastSyncTime()
+
+	newSyncTime, err := SyncBooksToTypesense(ctx, lastSyncTime)
+	if err != nil {
+		log.Printf("Sync failed, last sync time stays at %s: %v", lastSyncTime.Format(time.RFC3339), err)
+		return
+	}
+
+	if cfg.EnableSoftDelete {
+		if err := handleSoftDeletes(ctx, lastSyncTime); err != nil {
+			log.Printf("Soft delete sync failed, last sync time stays at %s: %v", lastSyncTime.Format(time.RFC3339), err)
+			return
+		}
+	}
+
+	SetLastSyncTime(newSyncTime)
 }
 
 func handleSoftDeletes(ctx context.Context, lastSyncTime time.Time) error {
@@ -101,24 +99,18 @@ func handleSoftDeletes(ctx context.Context, lastSyncTime time.Time) error {
 		return err
 	}
 
-	SetLastSyncTime(time.Now())
 	return nil
 }
 
 // SyncBookOnUpdate handles real-time sync when a book is created or updated
+// The sync time is deliberately left alone here. Moving it forward on a single
+// write would push the window past concurrent changes made by anything else,
+// and the periodic sync would never pick them up.
 func SyncBookOnUpdate(ctx context.Context, book *models.Book) error {
-	if err := SyncSingleBookToTypesense(ctx, *book); err != nil {
-		return err
-	}
-	SetLastSyncTime(time.Now())
-	return nil
+	return SyncSingleBookToTypesense(ctx, *book)
 }
 
 // SyncBookDeletionOnDelete handles real-time sync when a book is deleted
 func SyncBookDeletionOnDelete(ctx context.Context, bookID uint) error {
-	if err := SyncSingleBookDeletionToTypesense(ctx, bookID); err != nil {
-		return err
-	}
-	SetLastSyncTime(time.Now())
-	return nil
+	return SyncSingleBookDeletionToTypesense(ctx, bookID)
 }

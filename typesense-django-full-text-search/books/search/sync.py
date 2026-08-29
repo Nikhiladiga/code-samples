@@ -37,14 +37,19 @@ def run_full_sync():
     logger.info('Running full sync...')
     from books.models import Book
 
+    # Stamp the time before reading anything. Taking it at the end would
+    # exclude rows changed while the sync was running.
+    sync_started_at = timezone.now()
     last_id = 0
     total_processed = 0
+    failed = False
 
     while True:
         try:
             books = list(Book.objects.filter(id__gt=last_id).order_by('id')[:BATCH_SIZE])
         except Exception as err:
             logger.error('Database error during full sync fetching: %s', err)
+            failed = True
             break
 
         if not books:
@@ -59,9 +64,19 @@ def run_full_sync():
             logger.info('Full sync: Processed %d books.', total_processed)
         except Exception as err:
             logger.error('Error importing documents during full sync: %s', err)
+            failed = True
             break
 
-    _set_last_sync_time(timezone.now())
+    # Only advance the sync time when the whole run succeeded, so a partial
+    # failure is retried on the next run instead of being skipped forever.
+    if failed:
+        logger.warning(
+            'Full sync incomplete; last_sync_time stays at %s',
+            get_last_sync_time().isoformat(),
+        )
+        return
+
+    _set_last_sync_time(sync_started_at)
     logger.info('Full sync completed.')
 
 def run_incremental_sync():
@@ -71,15 +86,23 @@ def run_incremental_sync():
     logger.info('Running incremental sync since %s...', current_last_sync.isoformat())
     from books.models import Book
 
+    failed = False
+
     # 1. Upsert newly created or updated books — paginated
     last_id = 0
     total_upserted = 0
 
-    while True:
-        batch = list(
-            Book.objects.filter(updated_at__gt=current_last_sync, id__gt=last_id)
-            .order_by('id')[:BATCH_SIZE]
-        )
+    while not failed:
+        try:
+            batch = list(
+                Book.objects.filter(updated_at__gt=current_last_sync, id__gt=last_id)
+                .order_by('id')[:BATCH_SIZE]
+            )
+        except Exception as err:
+            logger.error('Database error during incremental sync upsert fetching: %s', err)
+            failed = True
+            break
+
         if not batch:
             break
 
@@ -91,14 +114,21 @@ def run_incremental_sync():
             total_upserted += len(documents)
         except Exception as err:
             logger.error('Error upserting documents in incremental sync: %s', err)
+            failed = True
+            break
 
     if total_upserted:
         logger.info('Incremental sync: Upserted %d books.', total_upserted)
 
     # 2. Delete soft-deleted books
-    deleted_books = Book.all_objects.filter(deleted_at__gt=current_last_sync)
+    if not failed:
+        try:
+            deleted_books = list(Book.all_objects.filter(deleted_at__gt=current_last_sync))
+        except Exception as err:
+            logger.error('Database error during incremental sync delete fetching: %s', err)
+            deleted_books = []
+            failed = True
 
-    if deleted_books.exists():
         for book in deleted_books:
             try:
                 typesense_client.collections[BOOKS_COLLECTION_NAME].documents[str(book.id)].delete()
@@ -106,6 +136,16 @@ def run_incremental_sync():
             except Exception as err:
                 if not (hasattr(err, 'status_code') and err.status_code == 404):
                     logger.error('Error deleting book %d from Typesense: %s', book.id, err)
+                    failed = True
+                    break
+
+    # Only advance the sync time when the whole run succeeded.
+    if failed:
+        logger.warning(
+            'Incremental sync incomplete; last_sync_time stays at %s',
+            get_last_sync_time().isoformat(),
+        )
+        return
 
     _set_last_sync_time(sync_started_at)
     logger.info('Incremental sync completed.')

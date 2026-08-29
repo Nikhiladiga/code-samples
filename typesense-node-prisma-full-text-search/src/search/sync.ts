@@ -19,9 +19,13 @@ const mapBookToTypesense = (b: Book) => ({
 
 export async function runFullSync() {
   console.log('Running full sync...');
+  // Stamp the time before reading anything. Taking it at the end would exclude
+  // rows changed while the sync was running, and they would never be retried.
+  const syncStartedAt = new Date();
   let lastId = 0;
   let hasMore = true;
   let totalProcessed = 0;
+  let failed = false;
 
   while (hasMore) {
     let books: Book[];
@@ -36,6 +40,7 @@ export async function runFullSync() {
       });
     } catch (err) {
       console.error('Database error during full sync fetching:', err);
+      failed = true;
       break; // Abort this sync run gracefully on DB failure
     }
 
@@ -54,18 +59,31 @@ export async function runFullSync() {
       console.log(`Full sync: Processed ${totalProcessed} books.`);
     } catch (err) {
       console.error('Error importing documents during full sync', err);
+      failed = true;
       break; 
     }
   }
 
-  // Update lastSyncTime to now
-  lastSyncTime = new Date();
+  // Only advance lastSyncTime when the whole run succeeded, so a partial
+  // failure is retried on the next run instead of being skipped forever.
+  if (failed) {
+    console.warn(`Full sync incomplete; lastSyncTime stays at ${lastSyncTime.toISOString()}`);
+    return;
+  }
+
+  lastSyncTime = syncStartedAt;
   console.log('Full sync completed.');
 }
 
 export async function runIncrementalSync() {
-  console.log(`Running incremental sync since ${lastSyncTime.toISOString()}...`);
-  
+  // Stamp the time before reading anything, and hold the window open against
+  // the previous stamp for the whole run.
+  const syncStartedAt = new Date();
+  const since = lastSyncTime;
+  console.log(`Running incremental sync since ${since.toISOString()}...`);
+
+  let failed = false;
+
   // 1. Process newly created or updated books in batches
   let lastUpsertId = 0;
   let hasMoreUpserts = true;
@@ -76,7 +94,7 @@ export async function runIncrementalSync() {
     try {
       updatedBooks = await prisma.book.findMany({
         where: {
-          updated_at: { gt: lastSyncTime },
+          updated_at: { gt: since },
           deleted_at: null,
           id: { gt: lastUpsertId }
         },
@@ -85,6 +103,7 @@ export async function runIncrementalSync() {
       });
     } catch (err) {
       console.error('Database error during incremental sync upsert fetching:', err);
+      failed = true;
       break;
     }
 
@@ -101,6 +120,7 @@ export async function runIncrementalSync() {
       totalUpserted += documents.length;
     } catch (err) {
       console.error('Error upserting documents in incremental sync', err);
+      failed = true;
       break;
     }
   }
@@ -119,7 +139,7 @@ export async function runIncrementalSync() {
     try {
       deletedBooks = await prisma.book.findMany({
         where: {
-          deleted_at: { gt: lastSyncTime },
+          deleted_at: { gt: since },
           id: { gt: lastDeleteId }
         },
         take: BATCH_SIZE,
@@ -127,6 +147,7 @@ export async function runIncrementalSync() {
       });
     } catch (err) {
       console.error('Database error during incremental sync delete fetching:', err);
+      failed = true;
       break;
     }
 
@@ -146,6 +167,7 @@ export async function runIncrementalSync() {
       totalDeleted += deletedBooks.length;
     } catch (err) {
       console.error('Error deleting documents in incremental sync', err);
+      failed = true;
       break;
     }
   }
@@ -154,7 +176,12 @@ export async function runIncrementalSync() {
     console.log(`Incremental sync: Deleted ${totalDeleted} books from Typesense.`);
   }
 
-  lastSyncTime = new Date();
+  if (failed) {
+    console.warn(`Incremental sync incomplete; lastSyncTime stays at ${lastSyncTime.toISOString()}`);
+    return;
+  }
+
+  lastSyncTime = syncStartedAt;
   console.log('Incremental sync completed.');
 }
 
@@ -167,15 +194,10 @@ export async function determineAndRunStartupSync() {
       // Empty Typesense collection, full sync
       await runFullSync();
     } else {
-      // Typesense has data, get latest updated_at from DB
-      const latestBook = await prisma.book.findFirst({
-        orderBy: { updated_at: 'desc' }
-      });
-
-      if (latestBook?.updated_at) {
-        lastSyncTime = latestBook.updated_at;
-      }
-      
+      // Typesense has data. Catch up from epoch so records that changed while
+      // the server was down are backfilled. Seeding from MAX(updated_at) would
+      // make the incremental query match zero rows by construction.
+      lastSyncTime = new Date(0);
       await runIncrementalSync();
     }
   } catch (error) {
