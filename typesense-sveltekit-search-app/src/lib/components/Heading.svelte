@@ -34,6 +34,7 @@
   width: 100%;
   text-align: center;
   position: relative;
+  isolation: isolate;
   margin-top: 6rem;
   margin-bottom: 2rem;
 }
@@ -66,10 +67,13 @@
 
 .Heading::after {
   content: "";
-  background: linear-gradient(
-    135deg,
-    rgba(213, 43, 127, 0.4),
-    rgba(102, 126, 234, 0.4)
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    #ed0e73 0deg,
+    rgba(10, 133, 255, 0.2) 55deg,
+    rgba(84, 214, 255, 0.2) 140deg,
+    rgba(0, 220, 128, 0.41) 160deg,
+    transparent 360deg
   );
   width: 320px;
   height: 180px;
@@ -80,6 +84,8 @@
   filter: blur(45px);
   top: -50%;
   animation: move 40s ease-out infinite;
+  pointer-events: none;
+  will-change: transform;
 }
 
 .sveltejs-brand {
@@ -130,6 +136,12 @@
   }
   100% {
     transform: translateX(-50%) translate(0%) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .Heading::after {
+    animation: none;
   }
 }
 </style>

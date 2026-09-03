@@ -1,69 +1,82 @@
-import { PUBLIC_TYPESENSE_INDEX } from '$env/static/public';
 import { typesenseInstantSearchAdapter } from '$lib/instantSearchAdapter';
 import instantsearch from 'instantsearch.js';
 import connectHits from 'instantsearch.js/es/connectors/hits/connectHits';
 import connectSearchBox from 'instantsearch.js/es/connectors/search-box/connectSearchBox';
+import connectStats from 'instantsearch.js/es/connectors/stats/connectStats';
+import { configure } from 'instantsearch.js/es/widgets';
 import type { Book } from './types';
 
 export class SearchService {
-  hits = $state<Book[]>([]);
-  query = $state('');
-  loading = $state(false);
-  hasSearched = $state(false);
+	hits = $state<Book[]>([]);
+	query = $state('');
+	loading = $state(false);
+	hasSearched = $state(false);
+	nbHits = $state(0);
 
-  private searchInstance: any;
-  private searchBoxWidget: any;
-  private hitsWidget: any;
-  private refineFn: (val: string) => void = () => {};
+	private searchInstance: any;
+	private searchBoxWidget: any;
+	private hitsWidget: any;
+	private statsWidget: any;
+	private refineFn: (val: string) => void = () => {};
 
-  constructor() {
-    if (typeof window !== 'undefined') {
-      this.searchInstance = instantsearch({
-        indexName: PUBLIC_TYPESENSE_INDEX || 'books',
-        searchClient: typesenseInstantSearchAdapter.searchClient,
-        future: {
-          preserveSharedStateOnUnmount: true,
-        },
-      });
-    }
-  }
+	constructor() {
+		if (typeof window !== 'undefined') {
+			this.searchInstance = instantsearch({
+				indexName: 'books',
+				searchClient: typesenseInstantSearchAdapter.searchClient,
+				future: {
+					preserveSharedStateOnUnmount: true
+				}
+			});
+		}
+	}
 
-  start() {
-    if (typeof window === 'undefined' || !this.searchInstance) return;
+	start() {
+		if (typeof window === 'undefined' || !this.searchInstance) return;
 
-    const searchBoxConnector = connectSearchBox((renderOptions) => {
-      this.query = renderOptions.query;
-      this.refineFn = renderOptions.refine;
-    });
+		const searchBoxConnector = connectSearchBox((renderOptions) => {
+			this.query = renderOptions.query;
+			this.refineFn = renderOptions.refine;
+		});
 
-    const hitsConnector = connectHits((renderOptions) => {
-      this.hits = renderOptions.hits as unknown as Book[];
-      this.hasSearched = true;
-    });
+		const hitsConnector = connectHits((renderOptions) => {
+			this.hits = renderOptions.hits as unknown as Book[];
+			this.hasSearched = true;
+		});
 
-    this.searchBoxWidget = searchBoxConnector({});
-    this.hitsWidget = hitsConnector({});
+		const statsConnector = connectStats((renderOptions) => {
+			this.nbHits = renderOptions.nbHits;
+		});
 
-    this.searchInstance.addWidgets([this.searchBoxWidget, this.hitsWidget]);
+		this.searchBoxWidget = searchBoxConnector({});
+		this.hitsWidget = hitsConnector({});
+		this.statsWidget = statsConnector({});
 
-    this.searchInstance.on('render', () => {
-      const status = this.searchInstance.status;
-      const helperLoading = this.searchInstance.helper?.state?.loading;
-      this.loading = status === 'loading' || status === 'stalled' || !!helperLoading;
-    });
+		this.searchInstance.addWidgets([
+			configure({ hitsPerPage: 12 }),
+			this.searchBoxWidget,
+			this.statsWidget,
+			this.hitsWidget
+		]);
 
-    this.searchInstance.start();
-  }
+		this.searchInstance.on('render', () => {
+			const status = this.searchInstance.status;
+			const helperLoading = this.searchInstance.helper?.state?.loading;
+			this.loading = status === 'loading' || status === 'stalled' || !!helperLoading;
+		});
 
-  refine(value: string) {
-    if (typeof window !== 'undefined' && this.refineFn) {
-      this.refineFn(value);
-    }
-  }
+		this.searchInstance.start();
+	}
 
-  destroy() {
-    if (typeof window !== 'undefined' && this.searchInstance) {
-      this.searchInstance.dispose();
-    }
-  }
+	refine(value: string) {
+		if (typeof window !== 'undefined' && this.refineFn) {
+			this.refineFn(value);
+		}
+	}
+
+	destroy() {
+		if (typeof window !== 'undefined' && this.searchInstance) {
+			this.searchInstance.dispose();
+		}
+	}
 }
